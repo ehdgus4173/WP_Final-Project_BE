@@ -1,15 +1,17 @@
-// src/utils/permission.js — ownership/role check for DELETE actions.
+// src/utils/permission.js — ownership/role checks (ERD v4.1 splits edit vs delete).
 //
-// canMutate is used by the DELETE branches (post delete, comment/reply delete):
-// the author OR an admin may delete. NOTE (ERD v4.1): EDIT is author-only —
-// admins cannot edit others' content — so update paths must NOT use this; they
-// compare reqUser.sub === ownerId directly.
+// isOwner   — UPDATE actions (e.g. post edit): author only. Admins may NOT edit.
+// canMutate — DELETE actions (post delete, comment/reply delete): author OR admin.
 //
 // Comparison key is the JWT `sub` claim (= user.id), not reqUser.id.
+
+function isOwner(reqUser, resourceOwnerId) {
+  return !!reqUser && reqUser.sub === resourceOwnerId;
+}
 
 function canMutate(reqUser, resourceOwnerId) {
   if (!reqUser) return false;
   return reqUser.role === "admin" || reqUser.sub === resourceOwnerId;
 }
 
-module.exports = { canMutate };
+module.exports = { isOwner, canMutate };
