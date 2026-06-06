@@ -27,18 +27,12 @@ async function create(req, res, next) {
   }
 }
 
-// GET /api/posts/:id  (public) → { post, comments }
-// user_vote is filled once votes land; comments arrive with feat/comments.
+// GET /api/posts/:id  (public, optionalAuth) → { post, comments }
+// getDetail returns the full aggregated payload (post + user_vote + comments).
 async function getById(req, res, next) {
   try {
-    const post = await postService.getDetail(req.params.id, req.user?.sub);
-    res.json({
-      success: true,
-      data: {
-        post, // includes user_vote (null when anonymous)
-        comments: [], // filled in feat/comments
-      },
-    });
+    const data = await postService.getDetail(req.params.id, req.user?.sub);
+    res.json({ success: true, data });
   } catch (err) {
     next(err);
   }

@@ -6,6 +6,7 @@ const express = require("express");
 const swaggerUi = require("swagger-ui-express");
 const healthRoutes = require("./health.routes");
 const { postRouter, issuePostRouter } = require("./post.routes");
+const { postCommentRouter, commentRouter } = require("./comment.routes");
 const { swaggerDocument } = require("../config/swagger");
 
 const router = express.Router();
@@ -17,12 +18,13 @@ router.use("/health", healthRoutes);
 router.use("/auth", require("./auth.routes"));
 router.use("/home", require("./home.routes"));
 router.use("/posts", postRouter);
+router.use("/posts", postCommentRouter); // POST /api/posts/:id/comments (create comment/reply)
 router.use("/issues", issuePostRouter); // POST /api/issues/:id/posts (create post)
+router.use("/comments", commentRouter); // DELETE /api/comments/:id
 router.use("/cron", require("./cron.routes"));
 router.use("/admin", require("./admin.routes"));
 
 // TODO: mount as implemented —
 // router.use('/issues', require('./issue.routes'));   // issue detail (issues domain) — can also mount at /issues
-// router.use('/comments', require('./comment.routes'));
 
 module.exports = router;
