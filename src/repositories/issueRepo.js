@@ -116,6 +116,54 @@ async function remove(id) {
   return rowCount > 0;
 }
 
+// --- Issue detail (GET /api/issues/:id) ---
+
+// Single published issue with post_count + KST date. null if missing/not published.
+async function findPublishedById(id) {
+  const { rows } = await db.query(
+    `SELECT ${ISSUE_CARD}
+       FROM issues i
+       LEFT JOIN posts p ON p.issue_id = i.id
+      WHERE i.status = 'published' AND i.id = $1
+      GROUP BY i.id`,
+    [id],
+  );
+  return rows[0] || null;
+}
+
+// Whitelisted ORDER BY clauses (never interpolate user input directly).
+const POST_ORDER = {
+  top: 'score DESC, p.created_at DESC',
+  latest: 'p.created_at DESC',
+};
+
+// Posts under an issue, with author + vote score + comment_count + body preview.
+// votes/comments are aggregated via scalar subqueries to avoid JOIN fan-out.
+async function listPostsByIssue(issueId, sort = 'top') {
+  const orderBy = POST_ORDER[sort] || POST_ORDER.top;
+  const { rows } = await db.query(
+    `SELECT
+       p.id,
+       p.title,
+       left(p.content, 100) AS body_preview,
+       json_build_object('id', u.id, 'username', u.username) AS author,
+       COALESCE((SELECT SUM(CASE WHEN value = 1  THEN 1 ELSE 0 END)
+                   FROM votes WHERE post_id = p.id), 0)::int AS upvotes,
+       COALESCE((SELECT SUM(CASE WHEN value = -1 THEN 1 ELSE 0 END)
+                   FROM votes WHERE post_id = p.id), 0)::int AS downvotes,
+       COALESCE((SELECT SUM(value) FROM votes WHERE post_id = p.id), 0)::int AS score,
+       (SELECT COUNT(*) FROM comments WHERE post_id = p.id)::int AS comment_count,
+       p.created_at,
+       p.updated_at
+     FROM posts p
+     JOIN users u ON u.id = p.user_id
+     WHERE p.issue_id = $1
+     ORDER BY ${orderBy}`,
+    [issueId],
+  );
+  return rows;
+}
+
 module.exports = {
   findTodayPublished,
   findPastPublished,
@@ -125,4 +173,6 @@ module.exports = {
   findById,
   publish,
   remove,
+  findPublishedById,
+  listPostsByIssue,
 };

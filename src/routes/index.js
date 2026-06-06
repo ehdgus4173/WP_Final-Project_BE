@@ -20,11 +20,9 @@ router.use("/home", require("./home.routes"));
 router.use("/posts", postRouter);
 router.use("/posts", postCommentRouter); // POST /api/posts/:id/comments (create comment/reply)
 router.use("/issues", issuePostRouter); // POST /api/issues/:id/posts (create post)
+router.use("/issues", require("./issue.routes")); // GET /api/issues/:id (issue detail)
 router.use("/comments", commentRouter); // DELETE /api/comments/:id
 router.use("/cron", require("./cron.routes"));
 router.use("/admin", require("./admin.routes"));
-
-// TODO: mount as implemented —
-// router.use('/issues', require('./issue.routes'));   // issue detail (issues domain) — can also mount at /issues
 
 module.exports = router;
