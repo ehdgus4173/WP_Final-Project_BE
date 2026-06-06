@@ -13,7 +13,9 @@ const postController = require('../controllers/postController');
 
 // /api/posts
 const postRouter = express.Router();
-postRouter.get('/:id', postController.getById); // public (optionalAuth added with votes)
+postRouter.get('/:id', postController.getById);       // public (optionalAuth added with votes)
+postRouter.put('/:id', auth, postController.update);  // author only
+postRouter.delete('/:id', auth, postController.remove); // author or admin
 
 // /api/issues — nested post creation under an issue
 const issuePostRouter = express.Router();

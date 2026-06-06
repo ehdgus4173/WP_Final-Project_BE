@@ -6,6 +6,7 @@
 
 const postRepo = require('../repositories/postRepo');
 const { createError } = require('../middleware/errorHandler');
+const { canMutate } = require('../utils/permission');
 
 // Create a post under an issue. Author is the authenticated user (JWT sub).
 // A non-existent issue_id trips the FK (pg error 23503) → surfaced as 404.
@@ -34,4 +35,29 @@ async function getDetail(id) {
   return post;
 }
 
-module.exports = { create, getDetail };
+// Update title/content — AUTHOR ONLY. Admins cannot edit others' posts
+// (ERD v4.1), so compare reqUser.sub === owner directly (not canMutate).
+async function update(postId, reqUser, { title, content }) {
+  const post = await postRepo.findById(postId);
+  if (!post) {
+    throw createError(404, 'POST_NOT_FOUND', '게시물을 찾을 수 없습니다.');
+  }
+  if (post.user_id !== reqUser.sub) {
+    throw createError(403, 'NOT_OWNER', '본인 게시물만 수정할 수 있습니다.');
+  }
+  return postRepo.update(postId, { title, content });
+}
+
+// Delete — author OR admin (canMutate). Hard delete cascades comments/votes.
+async function remove(postId, reqUser) {
+  const post = await postRepo.findById(postId);
+  if (!post) {
+    throw createError(404, 'POST_NOT_FOUND', '게시물을 찾을 수 없습니다.');
+  }
+  if (!canMutate(reqUser, post.user_id)) {
+    throw createError(403, 'FORBIDDEN', '삭제 권한이 없습니다.');
+  }
+  await postRepo.remove(postId);
+}
+
+module.exports = { create, getDetail, update, remove };

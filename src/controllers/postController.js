@@ -44,4 +44,30 @@ async function getById(req, res, next) {
   }
 }
 
-module.exports = { create, getById };
+// PUT /api/posts/:id  (auth, author only) → 200 { id, title, updated_at }
+async function update(req, res, next) {
+  try {
+    const post = await postService.update(req.params.id, req.user, {
+      title: req.body.title,
+      content: req.body.content,
+    });
+    res.json({
+      success: true,
+      data: { id: post.id, title: post.title, updated_at: post.updated_at },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// DELETE /api/posts/:id  (auth, author or admin) → 204 No Content
+async function remove(req, res, next) {
+  try {
+    await postService.remove(req.params.id, req.user);
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { create, getById, update, remove };
