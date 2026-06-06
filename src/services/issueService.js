@@ -7,6 +7,7 @@
 const issueRepo = require('../repositories/issueRepo');
 const geminiClient = require('../jobs/geminiClient');
 const { todayInKST } = require('../utils/time');
+const { createError } = require('../middleware/errorHandler');
 
 // today_issue keeps source_url; past_issues omit it (spec §4.1.1 example).
 function toPastCard(row) {
@@ -46,4 +47,33 @@ async function generateDailyIssue() {
   return { date, status: 'success', issue_id: issue.id };
 }
 
-module.exports = { getHome, generateDailyIssue };
+// --- Admin issue review ---
+
+async function listForAdmin(status = 'pending') {
+  return issueRepo.listByStatus(status);
+}
+
+async function publishIssue(id) {
+  const updated = await issueRepo.publish(id);
+  if (updated) return updated;
+  // Disambiguate why the publish didn't happen.
+  const existing = await issueRepo.findById(id);
+  if (!existing) throw createError(404, 'ISSUE_NOT_FOUND', '이슈를 찾을 수 없습니다.');
+  throw createError(409, 'ALREADY_PUBLISHED', '이미 게시된 이슈입니다.');
+}
+
+async function rejectIssue(id) {
+  const removed = await issueRepo.remove(id);
+  if (removed) return;
+  const existing = await issueRepo.findById(id);
+  if (!existing) throw createError(404, 'ISSUE_NOT_FOUND', '이슈를 찾을 수 없습니다.');
+  throw createError(409, 'NOT_PENDING', '검수 대기(pending) 상태가 아닙니다.');
+}
+
+module.exports = {
+  getHome,
+  generateDailyIssue,
+  listForAdmin,
+  publishIssue,
+  rejectIssue,
+};
