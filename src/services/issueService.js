@@ -34,13 +34,16 @@ async function getHome() {
 }
 
 // Cron: generate today's issue (status='pending'). Skips if one already exists
-// for today (KST, status-agnostic). Throws on Gemini/parse failure → controller
-// logs + 500.
-async function generateDailyIssue() {
+// for today (KST, status-agnostic) — unless `force` is set, which bypasses the
+// dedup and always generates (for demo/manual re-trigger). Throws on
+// Gemini/parse failure → controller logs + 500.
+async function generateDailyIssue(force = false) {
   const date = todayInKST();
-  const existing = await issueRepo.findByDate(date);
-  if (existing) {
-    return { date, status: 'skipped', issue_id: existing.id };
+  if (!force) {
+    const existing = await issueRepo.findByDate(date);
+    if (existing) {
+      return { date, status: 'skipped', issue_id: existing.id };
+    }
   }
   const ai = await geminiClient.generateIssue();
   const issue = await issueRepo.insert(ai);
