@@ -17,6 +17,8 @@ tags:
   - name: Health
   - name: Auth
   - name: Home
+  - name: Posts
+  - name: Comments
   - name: Admin
   - name: Cron
 
@@ -288,6 +290,234 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  /issues/{id}/posts:
+    post:
+      tags: [Posts]
+      summary: 게시물 작성
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/IssueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, content]
+              properties:
+                title: { type: string, maxLength: 120 }
+                content: { type: string, minLength: 20, maxLength: 10000, description: 마크다운 원문 }
+      responses:
+        "201":
+          description: 생성됨
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          id: { type: string, example: "5021" }
+                          issue_id: { type: string, example: "100" }
+                          title: { type: string }
+                          created_at: { type: string, format: date-time }
+        "400": { $ref: "#/components/responses/BadInput" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /posts/{id}:
+    get:
+      tags: [Posts]
+      summary: 게시물 상세 (본문·점수·user_vote + 댓글·대댓글)
+      description: optionalAuth — 로그인 시 user_vote / 각 댓글 liked_by_me 채워짐.
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        "200":
+          description: 게시물 상세
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          post: { $ref: "#/components/schemas/PostDetail" }
+                          comments:
+                            type: array
+                            items: { $ref: "#/components/schemas/Comment" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Posts]
+      summary: 게시물 수정 (작성자 본인만 — admin도 불가)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, content]
+              properties:
+                title: { type: string, maxLength: 120 }
+                content: { type: string, minLength: 20, maxLength: 10000 }
+      responses:
+        "200":
+          description: 수정됨
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          id: { type: string }
+                          title: { type: string }
+                          updated_at: { type: string, format: date-time }
+        "400": { $ref: "#/components/responses/BadInput" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Posts]
+      summary: 게시물 삭제 (작성자 또는 admin)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        "204": { description: 삭제됨 (body 없음) }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /posts/{id}/votes:
+    post:
+      tags: [Posts]
+      summary: 추천/비추천 토글
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [value]
+              properties:
+                value: { type: integer, enum: [1, -1] }
+      responses:
+        "201":
+          description: 신규 추천 (created)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - properties:
+                      data: { $ref: "#/components/schemas/VoteResult" }
+        "200":
+          description: 변경 또는 취소 (updated | deleted)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - properties:
+                      data: { $ref: "#/components/schemas/VoteResult" }
+        "400": { $ref: "#/components/responses/BadInput" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /posts/{id}/comments:
+    post:
+      tags: [Comments]
+      summary: 댓글·대댓글 작성 (parent_id 있으면 대댓글)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, minLength: 2, maxLength: 1000 }
+                parent_id: { type: integer, nullable: true, description: "있으면 대댓글(부모는 depth 0)" }
+      responses:
+        "201":
+          description: 생성됨
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - properties:
+                      data: { $ref: "#/components/schemas/Comment" }
+        "400":
+          description: 입력 오류 또는 대댓글에 답글 (BAD_INPUT / CANNOT_REPLY_TO_REPLY)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404":
+          description: 게시물/부모 댓글 없음 (POST_NOT_FOUND / PARENT_NOT_FOUND)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /comments/{id}:
+    delete:
+      tags: [Comments]
+      summary: 댓글·대댓글 삭제 (작성자 또는 admin)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      responses:
+        "204": { description: 삭제됨 (body 없음) }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /comments/{id}/likes:
+    post:
+      tags: [Comments]
+      summary: 댓글·대댓글 좋아요 토글
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      responses:
+        "201":
+          description: 좋아요 추가 (created)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - properties:
+                      data: { $ref: "#/components/schemas/LikeResult" }
+        "200":
+          description: 좋아요 취소 (deleted)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - properties:
+                      data: { $ref: "#/components/schemas/LikeResult" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -306,6 +536,18 @@ components:
       required: true
       schema: { type: integer }
       description: Issue ID
+    PostId:
+      in: path
+      name: id
+      required: true
+      schema: { type: integer }
+      description: Post ID
+    CommentId:
+      in: path
+      name: id
+      required: true
+      schema: { type: integer }
+      description: Comment ID
 
   schemas:
     Success:
@@ -351,6 +593,50 @@ components:
         date: { type: string, example: "2026-06-07", description: "KST 날짜" }
         post_count: { type: integer, example: 12 }
         created_at: { type: string, format: date-time }
+    Author:
+      type: object
+      properties:
+        id: { type: string, example: "42" }
+        username: { type: string, example: alex_92 }
+    PostDetail:
+      type: object
+      properties:
+        id: { type: string, example: "5021" }
+        issue_id: { type: string, example: "100" }
+        title: { type: string }
+        content: { type: string, description: 마크다운 원문 }
+        author: { $ref: "#/components/schemas/Author" }
+        upvotes: { type: integer, example: 18 }
+        downvotes: { type: integer, example: 2 }
+        score: { type: integer, example: 16 }
+        user_vote: { type: integer, enum: [1, -1], nullable: true, description: "로그인 시에만; 비로그인 null" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time, nullable: true }
+    Comment:
+      type: object
+      properties:
+        id: { type: string, example: "7011" }
+        post_id: { type: string, example: "5021" }
+        parent_id: { type: string, nullable: true, description: "null=댓글, 값 있으면 대댓글" }
+        depth: { type: integer, enum: [0, 1], description: "0=댓글, 1=대댓글" }
+        content: { type: string }
+        author: { $ref: "#/components/schemas/Author" }
+        like_count: { type: integer, example: 12 }
+        liked_by_me: { type: boolean, description: "로그인 시에만 true 가능" }
+        created_at: { type: string, format: date-time }
+    VoteResult:
+      type: object
+      properties:
+        post_id: { type: integer, example: 5021 }
+        value: { type: integer, enum: [1, -1], nullable: true, description: "취소 시 null" }
+        action: { type: string, enum: [created, updated, deleted] }
+    LikeResult:
+      type: object
+      properties:
+        comment_id: { type: integer, example: 7011 }
+        liked: { type: boolean }
+        like_count: { type: integer, example: 13 }
+        action: { type: string, enum: [created, deleted] }
 
   responses:
     BadInput:
