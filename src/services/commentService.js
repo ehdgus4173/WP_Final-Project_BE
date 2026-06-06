@@ -5,6 +5,7 @@
 // rendered by the FE, not parsed here. DELETE uses canMutate (author or admin).
 
 const commentRepo = require('../repositories/commentRepo');
+const commentLikeRepo = require('../repositories/commentLikeRepo');
 const postRepo = require('../repositories/postRepo');
 const { createError } = require('../middleware/errorHandler');
 const { canMutate } = require('../utils/permission');
@@ -56,4 +57,26 @@ async function remove(commentId, reqUser) {
   await commentRepo.remove(commentId);
 }
 
-module.exports = { create, remove };
+// Toggle a like on a comment/reply (single-direction). No existing like → add
+// (created); existing → remove (deleted). Returns the refreshed like_count.
+async function toggleLike(commentId, userId) {
+  const comment = await commentRepo.findById(commentId);
+  if (!comment) {
+    throw createError(404, 'COMMENT_NOT_FOUND', 'Comment not found.');
+  }
+
+  const existing = await commentLikeRepo.find(commentId, userId);
+  let liked;
+  if (!existing) {
+    await commentLikeRepo.insert(commentId, userId);
+    liked = true;
+  } else {
+    await commentLikeRepo.remove(commentId, userId);
+    liked = false;
+  }
+
+  const like_count = await commentLikeRepo.countByComment(commentId);
+  return { liked, like_count, action: liked ? 'created' : 'deleted' };
+}
+
+module.exports = { create, remove, toggleLike };

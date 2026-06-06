@@ -15,5 +15,6 @@ postCommentRouter.post('/:postId/comments', auth, commentController.create);
 // /api/comments
 const commentRouter = express.Router();
 commentRouter.delete('/:id', auth, commentController.remove);
+commentRouter.post('/:id/likes', auth, commentController.like); // like toggle
 
 module.exports = { postCommentRouter, commentRouter };

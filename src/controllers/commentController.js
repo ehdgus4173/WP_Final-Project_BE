@@ -39,4 +39,24 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { create, remove };
+// POST /api/comments/:id/likes  (auth) — toggle like.
+// 201 when liked, 200 when unliked.
+async function like(req, res, next) {
+  try {
+    const result = await commentService.toggleLike(req.params.id, req.user.sub);
+    const status = result.action === 'created' ? 201 : 200;
+    res.status(status).json({
+      success: true,
+      data: {
+        comment_id: Number(req.params.id),
+        liked: result.liked,
+        like_count: result.like_count,
+        action: result.action,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { create, remove, like };
