@@ -44,6 +44,11 @@ const env = {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),
+
+  // AI cron — only needed when /api/cron/generate-issues runs. Optional at boot;
+  // the cron path/middleware fail clearly if missing.
+  GEMINI_API_KEY: optional("GEMINI_API_KEY", ""),
+  CRON_SECRET: optional("CRON_SECRET", ""),
 };
 
 env.isProd = NODE_ENV === "production";
