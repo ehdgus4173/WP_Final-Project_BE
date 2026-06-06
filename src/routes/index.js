@@ -10,11 +10,11 @@ const router = express.Router();
 router.use("/health", healthRoutes);
 router.use("/auth", require("./auth.routes"));
 router.use("/home", require("./home.routes"));
+router.use("/cron", require("./cron.routes"));
 
 // TODO: mount as implemented —
 // router.use('/issues', require('./issue.routes'));
 // router.use('/posts', require('./post.routes'));
 // router.use('/comments', require('./comment.routes'));
-// router.use('/cron', require('./cron.routes'));
 
 module.exports = router;

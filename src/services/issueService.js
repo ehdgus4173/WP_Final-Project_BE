@@ -5,6 +5,8 @@
 // Only published issues are surfaced (filtering happens in issueRepo).
 
 const issueRepo = require('../repositories/issueRepo');
+const geminiClient = require('../jobs/geminiClient');
+const { todayInKST } = require('../utils/time');
 
 // today_issue keeps source_url; past_issues omit it (spec §4.1.1 example).
 function toPastCard(row) {
@@ -30,4 +32,18 @@ async function getHome() {
   };
 }
 
-module.exports = { getHome };
+// Cron: generate today's issue (status='pending'). Skips if one already exists
+// for today (KST, status-agnostic). Throws on Gemini/parse failure → controller
+// logs + 500.
+async function generateDailyIssue() {
+  const date = todayInKST();
+  const existing = await issueRepo.findByDate(date);
+  if (existing) {
+    return { date, status: 'skipped', issue_id: existing.id };
+  }
+  const ai = await geminiClient.generateIssue();
+  const issue = await issueRepo.insert(ai);
+  return { date, status: 'success', issue_id: issue.id };
+}
+
+module.exports = { getHome, generateDailyIssue };
