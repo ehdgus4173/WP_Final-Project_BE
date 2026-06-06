@@ -7,7 +7,9 @@ const issueService = require('../services/issueService');
 
 async function generateIssues(req, res, next) {
   try {
-    const result = await issueService.generateDailyIssue();
+    // ?force=true (or { force: true }) bypasses the daily dedup — manual re-trigger.
+    const force = req.query.force === 'true' || req.body?.force === true;
+    const result = await issueService.generateDailyIssue(force);
     res.json({ success: true, data: result });
   } catch (err) {
     console.error('[cron] generate-issues failed:', err.message);
