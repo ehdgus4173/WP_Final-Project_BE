@@ -6,6 +6,7 @@
 
 const postRepo = require('../repositories/postRepo');
 const voteRepo = require('../repositories/voteRepo');
+const commentRepo = require('../repositories/commentRepo');
 const { createError } = require('../middleware/errorHandler');
 const { canMutate } = require('../utils/permission');
 
@@ -27,8 +28,9 @@ async function create(issueId, authorId, { title, content }) {
   }
 }
 
-// Post detail for GET /posts/:id (post + author + score + user_vote).
-// userId is the requester's id (from optionalAuth) or undefined when anonymous.
+// Aggregated GET /posts/:id → { post (+ author/score/user_vote), comments[] }.
+// userId is the requester's id (from optionalAuth) or undefined when anonymous;
+// it personalizes user_vote and each comment's liked_by_me.
 async function getDetail(id, userId) {
   const post = await postRepo.findDetailById(id);
   if (!post) {
@@ -39,7 +41,8 @@ async function getDetail(id, userId) {
     const v = await voteRepo.find(id, userId);
     user_vote = v ? v.value : null;
   }
-  return { ...post, user_vote };
+  const comments = await commentRepo.findByPost(id, userId ?? null);
+  return { post: { ...post, user_vote }, comments };
 }
 
 // Update title/content — AUTHOR ONLY. Admins cannot edit others' posts
