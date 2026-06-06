@@ -1,6 +1,25 @@
-// tests/unit/permission.test.js — canMutate (delete-branch helper), no DB.
+// tests/unit/permission.test.js — isOwner (edit) + canMutate (delete), no DB.
 
-const { canMutate } = require("../../src/utils/permission");
+const { isOwner, canMutate } = require("../../src/utils/permission");
+
+describe("utils/permission.isOwner (edit-branch helper)", () => {
+  test("owner can edit own resource", () => {
+    expect(isOwner({ sub: "7", role: "user" }, "7")).toBe(true);
+  });
+
+  test("admin canNOT edit others' resource (edit is author-only)", () => {
+    expect(isOwner({ sub: "99", role: "admin" }, "7")).toBe(false);
+  });
+
+  test("non-owner cannot edit", () => {
+    expect(isOwner({ sub: "8", role: "user" }, "7")).toBe(false);
+  });
+
+  test("missing reqUser cannot edit", () => {
+    expect(isOwner(null, "7")).toBe(false);
+    expect(isOwner(undefined, "7")).toBe(false);
+  });
+});
 
 describe("utils/permission.canMutate", () => {
   test("owner can mutate own resource", () => {
