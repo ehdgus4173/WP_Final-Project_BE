@@ -17,6 +17,7 @@ tags:
   - name: Health
   - name: Auth
   - name: Home
+  - name: Issue
   - name: Admin
   - name: Cron
 
@@ -180,6 +181,34 @@ paths:
                           past_issues:
                             type: array
                             items: { $ref: "#/components/schemas/IssueCard" }
+
+  /issues/{id}:
+    get:
+      tags: [Issue]
+      summary: 이슈(published) + 게시물 목록
+      parameters:
+        - $ref: "#/components/parameters/IssueId"
+        - in: query
+          name: sort
+          schema: { type: string, enum: [top, latest], default: top }
+      responses:
+        "200":
+          description: 이슈 + 게시물 목록
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          issue: { $ref: "#/components/schemas/IssueCard" }
+                          posts:
+                            type: array
+                            items: { $ref: "#/components/schemas/PostCard" }
+        "400": { $ref: "#/components/responses/BadInput" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /admin/issues:
     get:
@@ -351,6 +380,23 @@ components:
         date: { type: string, example: "2026-06-07", description: "KST 날짜" }
         post_count: { type: integer, example: 12 }
         created_at: { type: string, format: date-time }
+    PostCard:
+      type: object
+      properties:
+        id: { type: string, example: "5021" }
+        title: { type: string }
+        body_preview: { type: string, description: "본문 첫 100자" }
+        author:
+          type: object
+          properties:
+            id: { type: string }
+            username: { type: string }
+        upvotes: { type: integer }
+        downvotes: { type: integer }
+        score: { type: integer }
+        comment_count: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time, nullable: true }
 
   responses:
     BadInput:

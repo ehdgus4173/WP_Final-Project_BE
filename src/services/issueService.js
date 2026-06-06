@@ -47,6 +47,16 @@ async function generateDailyIssue() {
   return { date, status: 'success', issue_id: issue.id };
 }
 
+// Issue detail (GET /api/issues/:id): published issue + its posts list.
+// sort: 'top' (score) | 'latest' (recency); default 'top'.
+async function getIssueDetail(id, sort) {
+  const issue = await issueRepo.findPublishedById(id);
+  if (!issue) throw createError(404, 'ISSUE_NOT_FOUND', '이슈를 찾을 수 없습니다.');
+  const safeSort = sort === 'latest' ? 'latest' : 'top';
+  const posts = await issueRepo.listPostsByIssue(id, safeSort);
+  return { issue, posts };
+}
+
 // --- Admin issue review ---
 
 async function listForAdmin(status = 'pending') {
@@ -72,6 +82,7 @@ async function rejectIssue(id) {
 
 module.exports = {
   getHome,
+  getIssueDetail,
   generateDailyIssue,
   listForAdmin,
   publishIssue,
