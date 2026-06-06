@@ -24,10 +24,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
     origin(origin, cb) {
-      // Allow same-origin / curl / Postman (no Origin header).
+      // No Origin header (curl/Postman/server-to-server) → allow.
       if (!origin) return cb(null, true);
       if (env.FE_ORIGIN.includes(origin)) return cb(null, true);
-      return cb(new Error(`CORS: origin not allowed — ${origin}`));
+      // Disallowed origin: don't throw (that 500s same-origin POSTs, which the
+      // browser still tags with an Origin header). Just omit the CORS headers —
+      // same-origin requests still work; cross-origin ones the browser blocks.
+      return cb(null, false);
     },
   }),
 );
