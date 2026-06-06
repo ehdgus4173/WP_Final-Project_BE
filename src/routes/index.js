@@ -3,9 +3,14 @@
 // Domain routers are added incrementally as endpoints land.
 
 const express = require("express");
+const swaggerUi = require("swagger-ui-express");
 const healthRoutes = require("./health.routes");
+const { swaggerDocument } = require("../config/swagger");
 
 const router = express.Router();
+
+// API docs (OpenAPI 3.0) at /api/docs
+router.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 router.use("/health", healthRoutes);
 router.use("/auth", require("./auth.routes"));
