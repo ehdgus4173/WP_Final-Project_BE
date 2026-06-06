@@ -31,12 +31,12 @@ async function create(req, res, next) {
 // user_vote is filled once votes land; comments arrive with feat/comments.
 async function getById(req, res, next) {
   try {
-    const post = await postService.getDetail(req.params.id);
+    const post = await postService.getDetail(req.params.id, req.user?.sub);
     res.json({
       success: true,
       data: {
-        post: { ...post, user_vote: null },
-        comments: [],
+        post, // includes user_vote (null when anonymous)
+        comments: [], // filled in feat/comments
       },
     });
   } catch (err) {

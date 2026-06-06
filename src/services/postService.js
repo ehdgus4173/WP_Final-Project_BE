@@ -5,6 +5,7 @@
 // DELETE uses canMutate (author or admin).
 
 const postRepo = require('../repositories/postRepo');
+const voteRepo = require('../repositories/voteRepo');
 const { createError } = require('../middleware/errorHandler');
 const { canMutate } = require('../utils/permission');
 
@@ -20,19 +21,25 @@ async function create(issueId, authorId, { title, content }) {
     });
   } catch (err) {
     if (err.code === '23503') {
-      throw createError(404, 'ISSUE_NOT_FOUND', '존재하지 않는 이슈입니다.');
+      throw createError(404, 'ISSUE_NOT_FOUND', 'Issue not found.');
     }
     throw err;
   }
 }
 
-// Post detail for GET /posts/:id (post + author + score). 404 if missing.
-async function getDetail(id) {
+// Post detail for GET /posts/:id (post + author + score + user_vote).
+// userId is the requester's id (from optionalAuth) or undefined when anonymous.
+async function getDetail(id, userId) {
   const post = await postRepo.findDetailById(id);
   if (!post) {
-    throw createError(404, 'POST_NOT_FOUND', '게시물을 찾을 수 없습니다.');
+    throw createError(404, 'POST_NOT_FOUND', 'Post not found.');
   }
-  return post;
+  let user_vote = null;
+  if (userId) {
+    const v = await voteRepo.find(id, userId);
+    user_vote = v ? v.value : null;
+  }
+  return { ...post, user_vote };
 }
 
 // Update title/content — AUTHOR ONLY. Admins cannot edit others' posts
@@ -40,10 +47,10 @@ async function getDetail(id) {
 async function update(postId, reqUser, { title, content }) {
   const post = await postRepo.findById(postId);
   if (!post) {
-    throw createError(404, 'POST_NOT_FOUND', '게시물을 찾을 수 없습니다.');
+    throw createError(404, 'POST_NOT_FOUND', 'Post not found.');
   }
   if (post.user_id !== reqUser.sub) {
-    throw createError(403, 'NOT_OWNER', '본인 게시물만 수정할 수 있습니다.');
+    throw createError(403, 'NOT_OWNER', 'You can only edit your own post.');
   }
   return postRepo.update(postId, { title, content });
 }
@@ -52,10 +59,10 @@ async function update(postId, reqUser, { title, content }) {
 async function remove(postId, reqUser) {
   const post = await postRepo.findById(postId);
   if (!post) {
-    throw createError(404, 'POST_NOT_FOUND', '게시물을 찾을 수 없습니다.');
+    throw createError(404, 'POST_NOT_FOUND', 'Post not found.');
   }
   if (!canMutate(reqUser, post.user_id)) {
-    throw createError(403, 'FORBIDDEN', '삭제 권한이 없습니다.');
+    throw createError(403, 'FORBIDDEN', 'You do not have permission to delete this post.');
   }
   await postRepo.remove(postId);
 }
