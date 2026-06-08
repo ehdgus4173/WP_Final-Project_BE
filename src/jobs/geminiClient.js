@@ -15,7 +15,10 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const env = require("../config/env");
 
 // Prompt externalised to fetchTopic.md (read once at startup).
-const PROMPT = fs.readFileSync(path.resolve(__dirname, "fetchTopic.md"), "utf8");
+const PROMPT = fs.readFileSync(
+  path.resolve(__dirname, "fetchTopic.md"),
+  "utf8",
+);
 
 function parseIssueJson(text) {
   const start = text.indexOf("{");
@@ -33,13 +36,47 @@ function parseIssueJson(text) {
   };
 }
 
-function extractSourceUrl(response) {
+// AI STRONGLY USED
+// Fix A: grounding chunk URIs are short-lived vertexaisearch redirect links —
+// they expire (~30 days) and appear inaccessible when opened directly in a
+// browser. Resolve each to its final destination so we store a stable URL.
+// AbortSignal.timeout(5000) prevents hanging on slow/unresponsive targets.
+async function resolveRedirect(uri) {
+  try {
+    const res = await fetch(uri, {
+      redirect: "follow",
+      signal: AbortSignal.timeout(5000),
+    });
+    return res.url || uri;
+  } catch {
+    return uri; // network failure → keep the redirect as a fallback
+  }
+}
+
+// Fix B: score a resolved URL by path depth; penalise aggregators (daum,
+// naver) that ground to a section/homepage instead of an article deep-link.
+function urlScore(url) {
+  const AGGREGATORS = ["daum.net", "naver.com"];
+  try {
+    const { hostname, pathname } = new URL(url);
+    if (AGGREGATORS.some((d) => hostname === d || hostname.endsWith("." + d)))
+      return -1;
+    return pathname.split("/").filter(Boolean).length; // deeper path = more likely an article
+  } catch {
+    return 0;
+  }
+}
+
+async function extractSourceUrl(response) {
   const chunks =
     response?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-  for (const c of chunks) {
-    if (c?.web?.uri) return c.web.uri;
-  }
-  return null;
+  const uris = chunks.map((c) => c?.web?.uri).filter(Boolean);
+  if (uris.length === 0) return null;
+
+  // Resolve all redirect URIs in parallel, then pick the best article URL
+  const resolved = await Promise.all(uris.map(resolveRedirect));
+  resolved.sort((a, b) => urlScore(b) - urlScore(a));
+  return resolved[0];
 }
 
 async function generateIssue() {
@@ -54,7 +91,7 @@ async function generateIssue() {
 
   const result = await model.generateContent(PROMPT);
   const { title, summary } = parseIssueJson(result.response.text());
-  const source_url = extractSourceUrl(result.response);
+  const source_url = await extractSourceUrl(result.response);
   return { title, summary, source_url };
 }
 
