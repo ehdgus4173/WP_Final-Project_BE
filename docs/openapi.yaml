@@ -17,6 +17,7 @@ servers:
 tags:
   - name: Health
   - name: Auth
+  - name: Users
   - name: Home
   - name: Issue
   - name: Posts
@@ -161,6 +162,67 @@ paths:
                         properties:
                           user: { $ref: "#/components/schemas/User" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      tags: [Auth]
+      summary: Update current user (username / description)
+      description: "Email and role cannot be changed. Both username and description are optional; only provided fields are updated."
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: { type: string, example: alex_92, description: "3-20 characters: letters, digits, or underscore" }
+                description: { type: string, maxLength: 500, example: "Hello!", description: "Self introduction (max 500 chars)" }
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          user: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/BadInput" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409":
+          description: Username already taken (USERNAME_TAKEN)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /auth/me/posts:
+    get:
+      tags: [Auth]
+      summary: My recent posts (MyPage)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 3, minimum: 1, maximum: 20 }
+          description: "Number of posts to fetch (default 3)"
+      responses:
+        "200":
+          description: Recent posts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          posts:
+                            type: array
+                            items: { $ref: "#/components/schemas/UserPost" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
 
   /auth/oauth:
     post:
@@ -256,6 +318,63 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Public profile (MyPage, read-only)
+      description: "No authentication required. Anyone can view a user's profile."
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+          description: User ID
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          user: { $ref: "#/components/schemas/User" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /users/{id}/posts:
+    get:
+      tags: [Users]
+      summary: A user's recent posts
+      description: "No authentication required."
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+          description: User ID
+        - in: query
+          name: limit
+          schema: { type: integer, default: 3, minimum: 1, maximum: 20 }
+          description: "Number of posts to fetch (default 3)"
+      responses:
+        "200":
+          description: Recent posts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          posts:
+                            type: array
+                            items: { $ref: "#/components/schemas/UserPost" }
 
   /home:
     get:
@@ -742,7 +861,17 @@ components:
         id: { type: string, example: "42" }
         email: { type: string, example: user@example.com }
         username: { type: string, example: alex_92 }
+        description: { type: string, example: "Hi, I enjoy discussing current affairs.", description: "Self introduction (MyPage)" }
         role: { type: string, enum: [user, admin], example: user }
+        created_at: { type: string, format: date-time }
+    UserPost:
+      type: object
+      properties:
+        id: { type: string, example: "5021" }
+        issue_id: { type: string, example: "100" }
+        title: { type: string }
+        score: { type: integer, example: 7 }
+        comment_count: { type: integer, example: 3 }
         created_at: { type: string, format: date-time }
     Issue:
       type: object
