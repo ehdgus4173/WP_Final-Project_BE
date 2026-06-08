@@ -50,8 +50,12 @@ Then pick the single most suitable issue considering ALL of the criteria below.
 - summary: 2-3 sentences summarizing the background and the key points of contention,
   in a balanced way. Do not take a side.
 - Write BOTH title and summary in English.
+- source_url: the direct URL of the actual source article, from the outlet's OWN
+  domain (e.g. yna.co.kr, kbs.co.kr). MUST be a real link you actually found via
+  search. MUST NOT be a google.com / news.google.com / search / redirect link.
+  If you cannot give a real article URL, use an empty string "".
 
 [Output format]
 Output ONLY the single JSON object below.
 Do NOT add code fences (```), preface, explanation, or any other text.
-{"title":"Issue headline (max 80 characters)","summary":"2-3 sentence summary of the background and key points of contention"}
+{"title":"Issue headline (max 80 characters)","summary":"2-3 sentence summary of the background and key points of contention","source_url":"https://www.outlet.co.kr/article/..."}
