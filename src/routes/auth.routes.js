@@ -1,8 +1,10 @@
 // src/routes/auth.routes.js — /api/auth routes.
 //
-//   POST /register  (validate)              회원가입 (role 입력 차단)
-//   POST /login     (rateLimit + validate)  로그인 → { token, user }
-//   GET  /me        (auth)                   내 정보
+//   POST /register        (validate)              회원가입 (role 입력 차단)
+//   POST /login           (rateLimit + validate)  로그인 → { token, user }
+//   GET  /me              (auth)                   내 정보
+//   POST /oauth           (validate)  소셜 로그인 1단계: 신원확인 → { token } | { needs_username }
+//   POST /oauth/register  (validate)  소셜 로그인 2단계: username 입력 후 가입 → { token, user }
 
 const express = require("express");
 const { body } = require("express-validator");
@@ -35,6 +37,18 @@ const loginValidators = [
   body("password").notEmpty().withMessage("비밀번호를 입력하세요."),
 ];
 
+const oauthValidators = [
+  body("access_token").notEmpty().withMessage("access_token이 필요합니다."),
+];
+
+// Step 2 reuses the same username rule as register.
+const oauthRegisterValidators = [
+  body("access_token").notEmpty().withMessage("access_token이 필요합니다."),
+  body("username")
+    .matches(/^[A-Za-z0-9_]{3,20}$/)
+    .withMessage("사용자명은 3~20자의 영문·숫자·_ 만 허용됩니다."),
+];
+
 router.post("/register", registerValidators, validate, authController.register);
 router.post(
   "/login",
@@ -44,5 +58,14 @@ router.post(
   authController.login,
 );
 router.get("/me", auth, authController.me);
+
+// Social login (OAuth) — 2-step. See flow in 작업계획서 v2.0.
+router.post("/oauth", oauthValidators, validate, authController.oauthIdentify);
+router.post(
+  "/oauth/register",
+  oauthRegisterValidators,
+  validate,
+  authController.oauthRegister,
+);
 
 module.exports = router;

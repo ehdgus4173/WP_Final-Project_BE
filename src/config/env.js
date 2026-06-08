@@ -49,6 +49,11 @@ const env = {
   // the cron path/middleware fail clearly if missing.
   GEMINI_API_KEY: optional("GEMINI_API_KEY", ""),
   CRON_SECRET: optional("CRON_SECRET", ""),
+
+  // Social login (OAuth) — only needed for /api/auth/oauth*. Optional at boot;
+  // config/supabase.js fails clearly (503 OAUTH_NOT_CONFIGURED) if missing.
+  SUPABASE_URL: optional("SUPABASE_URL", ""),
+  SUPABASE_ANON_KEY: optional("SUPABASE_ANON_KEY", ""),
 };
 
 env.isProd = NODE_ENV === "production";
