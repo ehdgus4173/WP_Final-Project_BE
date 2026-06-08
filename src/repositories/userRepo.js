@@ -5,7 +5,7 @@
 
 const db = require("../db");
 
-const PUBLIC_COLS = "id, email, username, role, created_at";
+const PUBLIC_COLS = "id, email, username, role, description, created_at";
 
 async function findByEmail(email) {
   const { rows } = await db.query(
@@ -40,6 +40,20 @@ async function create({ email, username, password_hash }) {
     [email, username, password_hash],
   );
   return rows[0];
+}
+
+// Update editable profile fields (username, description). Email is read-only.
+// Only provided fields change; the rest keep their current value via COALESCE.
+async function updateProfile(id, { username, description }) {
+  const { rows } = await db.query(
+    `UPDATE users
+        SET username    = COALESCE($2, username),
+            description = COALESCE($3, description)
+      WHERE id = $1
+      RETURNING ${PUBLIC_COLS}`,
+    [id, username ?? null, description ?? null],
+  );
+  return rows[0] || null;
 }
 
 // --- Social login (OAuth) ---------------------------------------------------
@@ -82,6 +96,7 @@ module.exports = {
   findByUsername,
   findById,
   create,
+  updateProfile,
   findByProviderId,
   createOAuth,
   linkProvider,

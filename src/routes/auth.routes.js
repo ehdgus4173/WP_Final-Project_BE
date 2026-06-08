@@ -41,6 +41,21 @@ const oauthValidators = [
   body("access_token").notEmpty().withMessage("access_token이 필요합니다."),
 ];
 
+// Profile update (PATCH /me): username/description optional; email is read-only.
+const updateMeValidators = [
+  body("username")
+    .optional()
+    .matches(/^[A-Za-z0-9_]{3,20}$/)
+    .withMessage("사용자명은 3~20자의 영문·숫자·_ 만 허용됩니다."),
+  body("description")
+    .optional()
+    .isLength({ max: 500 })
+    .withMessage("자기소개는 최대 500자입니다."),
+  // email/role must never be changed via this endpoint.
+  body("email").not().exists().withMessage("이메일은 변경할 수 없습니다."),
+  body("role").not().exists().withMessage("role은 변경할 수 없습니다."),
+];
+
 // Step 2 reuses the same username rule as register.
 const oauthRegisterValidators = [
   body("access_token").notEmpty().withMessage("access_token이 필요합니다."),
@@ -58,6 +73,8 @@ router.post(
   authController.login,
 );
 router.get("/me", auth, authController.me);
+router.patch("/me", auth, updateMeValidators, validate, authController.updateMe);
+router.get("/me/posts", auth, authController.myPosts);
 
 // Social login (OAuth) — 2-step. See flow in 작업계획서 v2.0.
 router.post("/oauth", oauthValidators, validate, authController.oauthIdentify);
