@@ -4,6 +4,7 @@
 // is never accepted from input (DB DEFAULT 'user') to prevent escalation.
 
 const userRepo = require("../repositories/userRepo");
+const postRepo = require("../repositories/postRepo");
 const password = require("../utils/password");
 const { createError } = require("../middleware/errorHandler");
 const { getSupabase } = require("../config/supabase");
@@ -46,6 +47,27 @@ async function getMe(userId) {
   if (!user)
     throw createError(404, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다.");
   return user;
+}
+
+// Update the current user's editable profile fields (username, description).
+// Email is read-only and never changed here. Username uniqueness is enforced.
+async function updateProfile(userId, { username, description }) {
+  if (username !== undefined) {
+    const existing = await userRepo.findByUsername(username);
+    if (existing && String(existing.id) !== String(userId)) {
+      throw createError(409, "USERNAME_TAKEN", "이미 사용 중인 사용자명입니다.");
+    }
+  }
+  const user = await userRepo.updateProfile(userId, { username, description });
+  if (!user)
+    throw createError(404, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다.");
+  return user;
+}
+
+// Recent posts authored by the current user (for MyPage). limit clamped to 1–20.
+async function getMyPosts(userId, limit) {
+  const n = Math.min(Math.max(parseInt(limit, 10) || 3, 1), 20);
+  return postRepo.findRecentByUser(userId, n);
 }
 
 // --- Social login (OAuth) ---------------------------------------------------
@@ -128,6 +150,8 @@ module.exports = {
   register,
   verifyCredentials,
   getMe,
+  updateProfile,
+  getMyPosts,
   oauthIdentify,
   oauthRegister,
 };
