@@ -40,6 +40,30 @@ async function me(req, res, next) {
   }
 }
 
+// PATCH /me — update the current user's editable profile (username, description).
+async function updateMe(req, res, next) {
+  try {
+    const { username, description } = req.body;
+    const user = await authService.updateProfile(req.user.sub, {
+      username,
+      description,
+    });
+    res.json({ success: true, data: { user } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// GET /me/posts — the current user's recent posts (MyPage "Recent published").
+async function myPosts(req, res, next) {
+  try {
+    const posts = await authService.getMyPosts(req.user.sub, req.query.limit);
+    res.json({ success: true, data: { posts } });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // --- Social login (OAuth), step 1: identify -------------------------------
 // Existing account → issue our JWT (same shape as login). Brand-new account →
 // { needs_username: true } so the client collects a username and calls
@@ -76,4 +100,4 @@ async function oauthRegister(req, res, next) {
   }
 }
 
-module.exports = { register, login, me, oauthIdentify, oauthRegister };
+module.exports = { register, login, me, updateMe, myPosts, oauthIdentify, oauthRegister };

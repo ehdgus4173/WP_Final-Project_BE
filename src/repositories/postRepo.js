@@ -70,10 +70,31 @@ async function update(id, { title, content }) {
   return rows[0] || null;
 }
 
+// Recent posts authored by a user (newest first) — for MyPage "Recent published".
+// Returns id, title, created_at, aggregated score and comment count.
+async function findRecentByUser(userId, limit = 3) {
+  const { rows } = await db.query(
+    `SELECT p.id,
+            p.issue_id,
+            p.title,
+            p.created_at,
+            COALESCE(SUM(v.value), 0)::int AS score,
+            (SELECT COUNT(*)::int FROM comments c WHERE c.post_id = p.id) AS comment_count
+       FROM posts p
+       LEFT JOIN votes v ON v.post_id = p.id
+      WHERE p.user_id = $1
+      GROUP BY p.id
+      ORDER BY p.created_at DESC
+      LIMIT $2`,
+    [userId, limit],
+  );
+  return rows;
+}
+
 // Hard delete (FK ON DELETE CASCADE removes comments/votes). Returns boolean.
 async function remove(id) {
   const { rowCount } = await db.query(`DELETE FROM posts WHERE id = $1`, [id]);
   return rowCount > 0;
 }
 
-module.exports = { insert, findById, findDetailById, update, remove };
+module.exports = { insert, findById, findDetailById, update, remove, findRecentByUser };
