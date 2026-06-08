@@ -16,6 +16,7 @@ router.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 router.use("/health", healthRoutes);
 router.use("/auth", require("./auth.routes"));
+router.use("/users", require("./user.routes")); // GET /api/users/:id (public profile)
 router.use("/home", require("./home.routes"));
 router.use("/posts", postRouter);
 router.use("/posts", postCommentRouter); // POST /api/posts/:id/comments (create comment/reply)
