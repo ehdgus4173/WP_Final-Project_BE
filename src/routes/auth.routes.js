@@ -17,28 +17,28 @@ const { loginLimiter } = require("../middleware/rateLimit");
 const router = express.Router();
 
 const registerValidators = [
-  body("email").isEmail().withMessage("유효한 이메일이 아닙니다."),
+  body("email").isEmail().withMessage("Invalid email address."),
   body("username")
     .matches(/^[A-Za-z0-9_]{3,20}$/)
-    .withMessage("사용자명은 3~20자의 영문·숫자·_ 만 허용됩니다."),
+    .withMessage("Username must be 3-20 characters: letters, digits, or underscore."),
   body("password")
     .isLength({ min: 8 })
-    .withMessage("비밀번호는 최소 8자입니다.")
+    .withMessage("Password must be at least 8 characters.")
     .matches(/[A-Za-z]/)
-    .withMessage("비밀번호에 영문이 포함되어야 합니다.")
+    .withMessage("Password must contain a letter.")
     .matches(/\d/)
-    .withMessage("비밀번호에 숫자가 포함되어야 합니다."),
+    .withMessage("Password must contain a digit."),
   //  role must never be supplied via the API.
-  body("role").not().exists().withMessage("role은 지정할 수 없습니다."),
+  body("role").not().exists().withMessage("role cannot be specified."),
 ];
 
 const loginValidators = [
-  body("email").isEmail().withMessage("유효한 이메일이 아닙니다."),
-  body("password").notEmpty().withMessage("비밀번호를 입력하세요."),
+  body("email").isEmail().withMessage("Invalid email address."),
+  body("password").notEmpty().withMessage("Password is required."),
 ];
 
 const oauthValidators = [
-  body("access_token").notEmpty().withMessage("access_token이 필요합니다."),
+  body("access_token").notEmpty().withMessage("access_token is required."),
 ];
 
 // Profile update (PATCH /me): username/description optional; email is read-only.
@@ -58,10 +58,10 @@ const updateMeValidators = [
 
 // Step 2 reuses the same username rule as register.
 const oauthRegisterValidators = [
-  body("access_token").notEmpty().withMessage("access_token이 필요합니다."),
+  body("access_token").notEmpty().withMessage("access_token is required."),
   body("username")
     .matches(/^[A-Za-z0-9_]{3,20}$/)
-    .withMessage("사용자명은 3~20자의 영문·숫자·_ 만 허용됩니다."),
+    .withMessage("Username must be 3-20 characters: letters, digits, or underscore."),
 ];
 
 router.post("/register", registerValidators, validate, authController.register);

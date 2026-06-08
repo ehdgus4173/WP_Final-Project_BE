@@ -13,7 +13,7 @@ function validate(req, res, next) {
   const details = result
     .array()
     .map((e) => ({ field: e.path, message: e.msg }));
-  next(createError(400, "BAD_INPUT", "입력값이 올바르지 않습니다.", details));
+  next(createError(400, "BAD_INPUT", "Invalid input.", details));
 }
 
 module.exports = { validate };

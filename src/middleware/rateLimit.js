@@ -15,7 +15,7 @@ const loginLimiter = rateLimit({
       success: false,
       error: {
         code: "RATE_LIMITED",
-        message: "로그인 시도가 너무 많습니다. 잠시 후 다시 시도하세요.",
+        message: "Too many login attempts. Please try again later.",
       },
     });
   },
