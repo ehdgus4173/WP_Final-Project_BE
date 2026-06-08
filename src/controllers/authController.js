@@ -40,4 +40,40 @@ async function me(req, res, next) {
   }
 }
 
-module.exports = { register, login, me };
+// --- Social login (OAuth), step 1: identify -------------------------------
+// Existing account → issue our JWT (same shape as login). Brand-new account →
+// { needs_username: true } so the client collects a username and calls
+// /oauth/register. Nothing is created here.
+async function oauthIdentify(req, res, next) {
+  try {
+    const { access_token } = req.body;
+    const result = await authService.oauthIdentify({ accessToken: access_token });
+    if (result.needsUsername) {
+      return res.json({ success: true, data: { needs_username: true } });
+    }
+    const { user } = result;
+    const token = sign({ sub: user.id, username: user.username, role: user.role });
+    res.json({ success: true, data: { token, user } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// --- Social login (OAuth), step 2: register -------------------------------
+// Re-verifies the token and creates the account with the chosen username, then
+// issues our JWT (same shape as login).
+async function oauthRegister(req, res, next) {
+  try {
+    const { access_token, username } = req.body;
+    const { user } = await authService.oauthRegister({
+      accessToken: access_token,
+      username,
+    });
+    const token = sign({ sub: user.id, username: user.username, role: user.role });
+    res.json({ success: true, data: { token, user } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { register, login, me, oauthIdentify, oauthRegister };

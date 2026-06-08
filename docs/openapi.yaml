@@ -161,6 +161,101 @@ paths:
                           user: { $ref: "#/components/schemas/User" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /auth/oauth:
+    post:
+      tags: [Auth]
+      summary: 소셜 로그인 1단계 — 신원 확인 (Google/GitHub)
+      description: >
+        Supabase OAuth로 받은 access_token을 검증한다(하이브리드: 신원만 Supabase, 세션 토큰은 자체 JWT).
+        기존 계정이면 자체 JWT를 발급하고, 신규 계정이면 `needs_username: true`를 반환한다(이 단계에서는 계정을 만들지 않음).
+        FE가 보낸 이메일/이름은 신뢰하지 않고 검증된 토큰 클레임만 사용한다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [access_token]
+              properties:
+                access_token: { type: string, description: "Supabase OAuth access_token" }
+      responses:
+        "200":
+          description: 기존 계정(token+user) 또는 신규(needs_username)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - properties:
+                      data:
+                        oneOf:
+                          - type: object
+                            properties:
+                              token: { type: string }
+                              user: { $ref: "#/components/schemas/User" }
+                          - type: object
+                            properties:
+                              needs_username: { type: boolean, example: true }
+        "400": { $ref: "#/components/responses/BadInput" }
+        "401":
+          description: 토큰 검증 실패 (INVALID_OAUTH_TOKEN) 또는 이메일 미제공 (OAUTH_EMAIL_REQUIRED)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503":
+          description: 소셜 로그인 미설정 (OAUTH_NOT_CONFIGURED)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /auth/oauth/register:
+    post:
+      tags: [Auth]
+      summary: 소셜 로그인 2단계 — username 입력 후 가입 완료
+      description: >
+        1단계에서 `needs_username`을 받은 신규 유저가 username을 골라 가입을 완료한다.
+        access_token을 **재검증**한 뒤(1단계 결과/FE 값 신뢰 X) 계정을 생성하고 자체 JWT를 발급한다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [access_token, username]
+              properties:
+                access_token: { type: string }
+                username: { type: string, example: alex_92, description: "3~20자 영문·숫자·_" }
+      responses:
+        "200":
+          description: 가입 완료 (token+user)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          token: { type: string }
+                          user: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/BadInput" }
+        "401":
+          description: 토큰 검증 실패 (INVALID_OAUTH_TOKEN) 또는 이메일 미제공 (OAUTH_EMAIL_REQUIRED)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: 유저네임 중복 (USERNAME_TAKEN)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503":
+          description: 소셜 로그인 미설정 (OAUTH_NOT_CONFIGURED)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /home:
     get:
       tags: [Home]
