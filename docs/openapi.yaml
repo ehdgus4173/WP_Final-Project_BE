@@ -3,9 +3,10 @@ info:
   title: What's Today — Backend API
   version: "1.0.0"
   description: >
-    AI가 매일 선정·관리자가 검수·게시한 단 하나의 시사 이슈에 대해 토론하는 포럼의 백엔드 API.
-    모든 응답은 공통 envelope을 사용한다: 성공 `{ success: true, data }`, 실패 `{ success: false, error: { code, message } }`.
-    인증은 JWT(HS256)를 `Authorization: Bearer <token>` 헤더로 전달한다.
+    Backend API for a forum where users discuss the single daily current-affairs
+    issue that AI selects and an admin reviews and publishes.
+    All responses use a common envelope: success `{ success: true, data }`, failure `{ success: false, error: { code, message } }`.
+    Authentication uses a JWT (HS256) passed in the `Authorization: Bearer <token>` header.
 
 servers:
   - url: http://localhost:3000/api
@@ -27,7 +28,7 @@ paths:
   /health:
     get:
       tags: [Health]
-      summary: 프로세스 liveness
+      summary: Process liveness
       responses:
         "200":
           description: up
@@ -46,7 +47,7 @@ paths:
   /health/db:
     get:
       tags: [Health]
-      summary: DB 연결 확인 (SELECT 1)
+      summary: DB connection check (SELECT 1)
       responses:
         "200":
           description: DB up
@@ -61,7 +62,7 @@ paths:
                         properties:
                           db: { type: string, example: up }
         "503":
-          description: DB 연결 실패
+          description: DB connection failed
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -69,7 +70,7 @@ paths:
   /auth/register:
     post:
       tags: [Auth]
-      summary: 회원가입 (role 입력 무시 — 항상 'user')
+      summary: Register (role input ignored — always 'user')
       requestBody:
         required: true
         content:
@@ -79,11 +80,11 @@ paths:
               required: [email, username, password]
               properties:
                 email: { type: string, format: email, example: user@example.com }
-                username: { type: string, example: alex_92, description: "3~20자 영문·숫자·_" }
-                password: { type: string, format: password, example: abc12345, description: "최소 8자, 영문+숫자" }
+                username: { type: string, example: alex_92, description: "3-20 characters: letters, digits, or underscore" }
+                password: { type: string, format: password, example: abc12345, description: "At least 8 characters, letters + digits" }
       responses:
         "201":
-          description: 생성됨
+          description: Created
           content:
             application/json:
               schema:
@@ -96,7 +97,7 @@ paths:
                           user: { $ref: "#/components/schemas/User" }
         "400": { $ref: "#/components/responses/BadInput" }
         "409":
-          description: 이메일/유저네임 중복 (EMAIL_TAKEN / USERNAME_TAKEN)
+          description: Email/username already taken (EMAIL_TAKEN / USERNAME_TAKEN)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -104,7 +105,7 @@ paths:
   /auth/login:
     post:
       tags: [Auth]
-      summary: 로그인 (응답 body에 JWT token)
+      summary: Login (JWT token in the response body)
       requestBody:
         required: true
         content:
@@ -117,7 +118,7 @@ paths:
                 password: { type: string, format: password }
       responses:
         "200":
-          description: 로그인 성공
+          description: Login successful
           content:
             application/json:
               schema:
@@ -131,12 +132,12 @@ paths:
                           user: { $ref: "#/components/schemas/User" }
         "400": { $ref: "#/components/responses/BadInput" }
         "401":
-          description: 자격 불일치 (INVALID_CREDENTIALS)
+          description: Invalid credentials (INVALID_CREDENTIALS)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "429":
-          description: Rate limit 초과 (15분당 5회)
+          description: Rate limit exceeded (5 per 15 minutes)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -144,11 +145,11 @@ paths:
   /auth/me:
     get:
       tags: [Auth]
-      summary: 내 정보 조회
+      summary: Get current user
       security: [{ bearerAuth: [] }]
       responses:
         "200":
-          description: 내 정보
+          description: Current user
           content:
             application/json:
               schema:
@@ -164,11 +165,11 @@ paths:
   /auth/oauth:
     post:
       tags: [Auth]
-      summary: 소셜 로그인 1단계 — 신원 확인 (Google/GitHub)
+      summary: Social login step 1 — identity verification (Google/GitHub)
       description: >
-        Supabase OAuth로 받은 access_token을 검증한다(하이브리드: 신원만 Supabase, 세션 토큰은 자체 JWT).
-        기존 계정이면 자체 JWT를 발급하고, 신규 계정이면 `needs_username: true`를 반환한다(이 단계에서는 계정을 만들지 않음).
-        FE가 보낸 이메일/이름은 신뢰하지 않고 검증된 토큰 클레임만 사용한다.
+        Verifies the access_token obtained via Supabase OAuth (hybrid: identity via Supabase only, session token is our own JWT).
+        For an existing account it issues our JWT; for a new account it returns `needs_username: true` (no account is created in this step).
+        The email/name sent by the FE is not trusted; only verified token claims are used.
       requestBody:
         required: true
         content:
@@ -180,7 +181,7 @@ paths:
                 access_token: { type: string, description: "Supabase OAuth access_token" }
       responses:
         "200":
-          description: 기존 계정(token+user) 또는 신규(needs_username)
+          description: Existing account (token+user) or new account (needs_username)
           content:
             application/json:
               schema:
@@ -198,12 +199,12 @@ paths:
                               needs_username: { type: boolean, example: true }
         "400": { $ref: "#/components/responses/BadInput" }
         "401":
-          description: 토큰 검증 실패 (INVALID_OAUTH_TOKEN) 또는 이메일 미제공 (OAUTH_EMAIL_REQUIRED)
+          description: Token verification failed (INVALID_OAUTH_TOKEN) or email not provided (OAUTH_EMAIL_REQUIRED)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "503":
-          description: 소셜 로그인 미설정 (OAUTH_NOT_CONFIGURED)
+          description: Social login not configured (OAUTH_NOT_CONFIGURED)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -211,10 +212,10 @@ paths:
   /auth/oauth/register:
     post:
       tags: [Auth]
-      summary: 소셜 로그인 2단계 — username 입력 후 가입 완료
+      summary: Social login step 2 — complete sign-up after entering a username
       description: >
-        1단계에서 `needs_username`을 받은 신규 유저가 username을 골라 가입을 완료한다.
-        access_token을 **재검증**한 뒤(1단계 결과/FE 값 신뢰 X) 계정을 생성하고 자체 JWT를 발급한다.
+        A new user who received `needs_username` in step 1 picks a username to complete sign-up.
+        After **re-verifying** the access_token (step 1 result / FE values are not trusted), it creates the account and issues our JWT.
       requestBody:
         required: true
         content:
@@ -224,10 +225,10 @@ paths:
               required: [access_token, username]
               properties:
                 access_token: { type: string }
-                username: { type: string, example: alex_92, description: "3~20자 영문·숫자·_" }
+                username: { type: string, example: alex_92, description: "3-20 characters: letters, digits, or underscore" }
       responses:
         "200":
-          description: 가입 완료 (token+user)
+          description: Sign-up complete (token+user)
           content:
             application/json:
               schema:
@@ -241,17 +242,17 @@ paths:
                           user: { $ref: "#/components/schemas/User" }
         "400": { $ref: "#/components/responses/BadInput" }
         "401":
-          description: 토큰 검증 실패 (INVALID_OAUTH_TOKEN) 또는 이메일 미제공 (OAUTH_EMAIL_REQUIRED)
+          description: Token verification failed (INVALID_OAUTH_TOKEN) or email not provided (OAUTH_EMAIL_REQUIRED)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "409":
-          description: 유저네임 중복 (USERNAME_TAKEN)
+          description: Username already taken (USERNAME_TAKEN)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "503":
-          description: 소셜 로그인 미설정 (OAUTH_NOT_CONFIGURED)
+          description: Social login not configured (OAUTH_NOT_CONFIGURED)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -259,10 +260,10 @@ paths:
   /home:
     get:
       tags: [Home]
-      summary: 오늘 이슈 1건 + 과거 이슈 최근 10건 (published만)
+      summary: Today's issue + the 10 most recent past issues (published only)
       responses:
         "200":
-          description: 홈 데이터
+          description: Home data
           content:
             application/json:
               schema:
@@ -282,7 +283,7 @@ paths:
   /issues/{id}:
     get:
       tags: [Issue]
-      summary: 이슈(published) + 게시물 목록
+      summary: Issue (published) + post list
       parameters:
         - $ref: "#/components/parameters/IssueId"
         - in: query
@@ -290,7 +291,7 @@ paths:
           schema: { type: string, enum: [top, latest], default: top }
       responses:
         "200":
-          description: 이슈 + 게시물 목록
+          description: Issue + post list
           content:
             application/json:
               schema:
@@ -310,7 +311,7 @@ paths:
   /admin/issues:
     get:
       tags: [Admin]
-      summary: 이슈 검수 목록 (관리자)
+      summary: Issue review list (admin)
       security: [{ bearerAuth: [] }]
       parameters:
         - in: query
@@ -318,7 +319,7 @@ paths:
           schema: { type: string, enum: [pending, published], default: pending }
       responses:
         "200":
-          description: 이슈 목록
+          description: Issue list
           content:
             application/json:
               schema:
@@ -337,7 +338,7 @@ paths:
   /admin/issues/{id}:
     patch:
       tags: [Admin]
-      summary: 이슈 승인 (pending → published)
+      summary: Approve issue (pending → published)
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/IssueId"
@@ -352,7 +353,7 @@ paths:
                 status: { type: string, enum: [published] }
       responses:
         "200":
-          description: 승인됨
+          description: Approved
           content:
             application/json:
               schema:
@@ -370,18 +371,18 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409":
-          description: 이미 게시됨 (ALREADY_PUBLISHED)
+          description: Already published (ALREADY_PUBLISHED)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
     delete:
       tags: [Admin]
-      summary: 이슈 거절 (pending hard delete)
+      summary: Reject issue (pending hard delete)
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/IssueId"
       responses:
-        "204": { description: 삭제됨 (body 없음) }
+        "204": { description: Deleted (no body) }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -389,11 +390,11 @@ paths:
   /admin/regenerate-issues:
     post:
       tags: [Admin]
-      summary: 수동 이슈 생성 (관리자)
+      summary: Manual issue generation (admin)
       description: >
-        cron과 동일한 서비스로 오늘의 이슈를 수동 생성한다(생성물은 'pending' — 별도 승인 필요).
-        cron은 CRON_SECRET 전용이라 FE에서 호출 불가하므로 admin JWT로 보호되는 별도 진입점을 제공한다.
-        body 생략 가능. `force:true`면 오늘 이슈가 있어도 dedup을 무시하고 새로 생성한다.
+        Manually generates today's issue using the same service as cron (the result is 'pending' — separate approval required).
+        Since cron is CRON_SECRET-only and cannot be called from the FE, this provides a separate entry point protected by an admin JWT.
+        Body is optional. `force:true` bypasses the dedup and generates a new issue even if today's already exists.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: false
@@ -405,7 +406,7 @@ paths:
                 force: { type: boolean, default: false }
       responses:
         "200":
-          description: 생성/스킵
+          description: Generated / skipped
           content:
             application/json:
               schema:
@@ -422,7 +423,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "500":
-          description: AI 이슈 생성 실패 (GENERATION_FAILED)
+          description: AI issue generation failed (GENERATION_FAILED)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -430,17 +431,17 @@ paths:
   /cron/generate-issues:
     post:
       tags: [Cron]
-      summary: "[internal] 오늘의 이슈 생성 (Gemini → pending). pg_cron이 호출."
-      description: "Authorization 헤더에 CRON_SECRET을 Bearer로 전달. 일반 JWT 아님."
+      summary: "[internal] Generate today's issue (Gemini → pending). Called by pg_cron."
+      description: "Pass CRON_SECRET as Bearer in the Authorization header. Not a regular JWT."
       security: [{ cronSecret: [] }]
       parameters:
         - in: query
           name: force
           schema: { type: boolean, default: false }
-          description: "true면 오늘 이슈가 있어도 dedup 무시하고 새로 생성(수동 재트리거)"
+          description: "If true, bypass the dedup and generate a new issue even if today's exists (manual re-trigger)"
       responses:
         "200":
-          description: 생성/스킵
+          description: Generated / skipped
           content:
             application/json:
               schema:
@@ -455,7 +456,7 @@ paths:
                           issue_id: { type: string, example: "131" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "500":
-          description: Gemini 호출/파싱 실패
+          description: Gemini call/parse failure
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -463,7 +464,7 @@ paths:
   /issues/{id}/posts:
     post:
       tags: [Posts]
-      summary: 게시물 작성
+      summary: Create post
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/IssueId"
@@ -476,10 +477,10 @@ paths:
               required: [title, content]
               properties:
                 title: { type: string, maxLength: 120 }
-                content: { type: string, minLength: 20, maxLength: 10000, description: 마크다운 원문 }
+                content: { type: string, minLength: 20, maxLength: 10000, description: Markdown source }
       responses:
         "201":
-          description: 생성됨
+          description: Created
           content:
             application/json:
               schema:
@@ -500,13 +501,13 @@ paths:
   /posts/{id}:
     get:
       tags: [Posts]
-      summary: 게시물 상세 (본문·점수·user_vote + 댓글·대댓글)
-      description: optionalAuth — 로그인 시 user_vote / 각 댓글 liked_by_me 채워짐.
+      summary: Post detail (body, score, user_vote + comments/replies)
+      description: optionalAuth — when logged in, user_vote and each comment's liked_by_me are populated.
       parameters:
         - $ref: "#/components/parameters/PostId"
       responses:
         "200":
-          description: 게시물 상세
+          description: Post detail
           content:
             application/json:
               schema:
@@ -523,7 +524,7 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
     put:
       tags: [Posts]
-      summary: 게시물 수정 (작성자 본인만 — admin도 불가)
+      summary: Edit post (author only — not even admin)
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/PostId"
@@ -539,7 +540,7 @@ paths:
                 content: { type: string, minLength: 20, maxLength: 10000 }
       responses:
         "200":
-          description: 수정됨
+          description: Updated
           content:
             application/json:
               schema:
@@ -558,12 +559,12 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
     delete:
       tags: [Posts]
-      summary: 게시물 삭제 (작성자 또는 admin)
+      summary: Delete post (author or admin)
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/PostId"
       responses:
-        "204": { description: 삭제됨 (body 없음) }
+        "204": { description: Deleted (no body) }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -571,7 +572,7 @@ paths:
   /posts/{id}/votes:
     post:
       tags: [Posts]
-      summary: 추천/비추천 토글
+      summary: Upvote/downvote toggle
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/PostId"
@@ -586,7 +587,7 @@ paths:
                 value: { type: integer, enum: [1, -1] }
       responses:
         "201":
-          description: 신규 추천 (created)
+          description: New vote (created)
           content:
             application/json:
               schema:
@@ -595,7 +596,7 @@ paths:
                   - properties:
                       data: { $ref: "#/components/schemas/VoteResult" }
         "200":
-          description: 변경 또는 취소 (updated | deleted)
+          description: Changed or cancelled (updated | deleted)
           content:
             application/json:
               schema:
@@ -610,7 +611,7 @@ paths:
   /posts/{id}/comments:
     post:
       tags: [Comments]
-      summary: 댓글·대댓글 작성 (parent_id 있으면 대댓글)
+      summary: Create comment/reply (reply if parent_id is present)
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/PostId"
@@ -623,10 +624,10 @@ paths:
               required: [content]
               properties:
                 content: { type: string, minLength: 2, maxLength: 1000 }
-                parent_id: { type: integer, nullable: true, description: "있으면 대댓글(부모는 depth 0)" }
+                parent_id: { type: integer, nullable: true, description: "If present, it's a reply (parent must be depth 0)" }
       responses:
         "201":
-          description: 생성됨
+          description: Created
           content:
             application/json:
               schema:
@@ -635,13 +636,13 @@ paths:
                   - properties:
                       data: { $ref: "#/components/schemas/Comment" }
         "400":
-          description: 입력 오류 또는 대댓글에 답글 (BAD_INPUT / CANNOT_REPLY_TO_REPLY)
+          description: Input error or replying to a reply (BAD_INPUT / CANNOT_REPLY_TO_REPLY)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404":
-          description: 게시물/부모 댓글 없음 (POST_NOT_FOUND / PARENT_NOT_FOUND)
+          description: Post/parent comment not found (POST_NOT_FOUND / PARENT_NOT_FOUND)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -649,12 +650,12 @@ paths:
   /comments/{id}:
     delete:
       tags: [Comments]
-      summary: 댓글·대댓글 삭제 (작성자 또는 admin)
+      summary: Delete comment/reply (author or admin)
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/CommentId"
       responses:
-        "204": { description: 삭제됨 (body 없음) }
+        "204": { description: Deleted (no body) }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -662,13 +663,13 @@ paths:
   /comments/{id}/likes:
     post:
       tags: [Comments]
-      summary: 댓글·대댓글 좋아요 토글
+      summary: Comment/reply like toggle
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/CommentId"
       responses:
         "201":
-          description: 좋아요 추가 (created)
+          description: Like added (created)
           content:
             application/json:
               schema:
@@ -677,7 +678,7 @@ paths:
                   - properties:
                       data: { $ref: "#/components/schemas/LikeResult" }
         "200":
-          description: 좋아요 취소 (deleted)
+          description: Like removed (deleted)
           content:
             application/json:
               schema:
@@ -697,7 +698,7 @@ components:
     cronSecret:
       type: http
       scheme: bearer
-      description: "CRON_SECRET (pg_cron 전용)"
+      description: "CRON_SECRET (pg_cron only)"
 
   parameters:
     IssueId:
@@ -759,8 +760,8 @@ components:
         id: { type: string, example: "100" }
         title: { type: string }
         summary: { type: string, nullable: true }
-        source_url: { type: string, nullable: true, description: "today_issue에만 포함" }
-        date: { type: string, example: "2026-06-07", description: "KST 날짜" }
+        source_url: { type: string, nullable: true, description: "Included only in today_issue" }
+        date: { type: string, example: "2026-06-07", description: "KST date" }
         post_count: { type: integer, example: 12 }
         created_at: { type: string, format: date-time }
     PostCard:
@@ -768,7 +769,7 @@ components:
       properties:
         id: { type: string, example: "5021" }
         title: { type: string }
-        body_preview: { type: string, description: "본문 첫 100자" }
+        body_preview: { type: string, description: "First 100 characters of the body" }
         author:
           type: object
           properties:
@@ -791,12 +792,12 @@ components:
         id: { type: string, example: "5021" }
         issue_id: { type: string, example: "100" }
         title: { type: string }
-        content: { type: string, description: 마크다운 원문 }
+        content: { type: string, description: Markdown source }
         author: { $ref: "#/components/schemas/Author" }
         upvotes: { type: integer, example: 18 }
         downvotes: { type: integer, example: 2 }
         score: { type: integer, example: 16 }
-        user_vote: { type: integer, enum: [1, -1], nullable: true, description: "로그인 시에만; 비로그인 null" }
+        user_vote: { type: integer, enum: [1, -1], nullable: true, description: "Only when logged in; null otherwise" }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time, nullable: true }
     Comment:
@@ -804,18 +805,18 @@ components:
       properties:
         id: { type: string, example: "7011" }
         post_id: { type: string, example: "5021" }
-        parent_id: { type: string, nullable: true, description: "null=댓글, 값 있으면 대댓글" }
-        depth: { type: integer, enum: [0, 1], description: "0=댓글, 1=대댓글" }
+        parent_id: { type: string, nullable: true, description: "null = comment, present = reply" }
+        depth: { type: integer, enum: [0, 1], description: "0 = comment, 1 = reply" }
         content: { type: string }
         author: { $ref: "#/components/schemas/Author" }
         like_count: { type: integer, example: 12 }
-        liked_by_me: { type: boolean, description: "로그인 시에만 true 가능" }
+        liked_by_me: { type: boolean, description: "Can be true only when logged in" }
         created_at: { type: string, format: date-time }
     VoteResult:
       type: object
       properties:
         post_id: { type: integer, example: 5021 }
-        value: { type: integer, enum: [1, -1], nullable: true, description: "취소 시 null" }
+        value: { type: integer, enum: [1, -1], nullable: true, description: "null when cancelled" }
         action: { type: string, enum: [created, updated, deleted] }
     LikeResult:
       type: object
@@ -827,22 +828,22 @@ components:
 
   responses:
     BadInput:
-      description: 입력값 오류 (BAD_INPUT)
+      description: Invalid input (BAD_INPUT)
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
     Unauthorized:
-      description: 인증 필요 (UNAUTHORIZED / INVALID_TOKEN)
+      description: Authentication required (UNAUTHORIZED / INVALID_TOKEN)
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
     Forbidden:
-      description: 권한 없음 (FORBIDDEN — 관리자 전용)
+      description: Forbidden (FORBIDDEN — admin only)
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
     NotFound:
-      description: 리소스 없음 (NOT_FOUND / ISSUE_NOT_FOUND)
+      description: Resource not found (NOT_FOUND / ISSUE_NOT_FOUND)
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }

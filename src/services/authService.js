@@ -10,10 +10,10 @@ const { getSupabase } = require("../config/supabase");
 
 async function register({ email, username, password: plain }) {
   if (await userRepo.findByEmail(email)) {
-    throw createError(409, "EMAIL_TAKEN", "이미 사용 중인 이메일입니다.");
+    throw createError(409, "EMAIL_TAKEN", "Email is already in use.");
   }
   if (await userRepo.findByUsername(username)) {
-    throw createError(409, "USERNAME_TAKEN", "이미 사용 중인 사용자명입니다.");
+    throw createError(409, "USERNAME_TAKEN", "Username is already taken.");
   }
   const password_hash = await password.hash(plain);
   // No role passed → DB DEFAULT 'user'.
@@ -34,7 +34,7 @@ async function verifyCredentials({ email, password: plain }) {
     throw createError(
       401,
       "INVALID_CREDENTIALS",
-      "이메일 또는 비밀번호가 올바르지 않습니다.",
+      "Invalid email or password.",
     );
   }
   delete user.password_hash;
@@ -44,7 +44,7 @@ async function verifyCredentials({ email, password: plain }) {
 async function getMe(userId) {
   const user = await userRepo.findById(userId);
   if (!user)
-    throw createError(404, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다.");
+    throw createError(404, "USER_NOT_FOUND", "User not found.");
   return user;
 }
 
@@ -65,7 +65,7 @@ async function resolveOAuthIdentity(accessToken) {
   const supabase = getSupabase(); // 503 if OAuth not configured
   const { data, error } = await supabase.auth.getUser(accessToken);
   if (error || !data?.user) {
-    throw createError(401, "INVALID_OAUTH_TOKEN", "유효하지 않은 OAuth 토큰입니다.");
+    throw createError(401, "INVALID_OAUTH_TOKEN", "Invalid OAuth token.");
   }
   const { user } = data;
   const email = user.email;
@@ -74,7 +74,7 @@ async function resolveOAuthIdentity(accessToken) {
   const provider_id = user.id;
   if (!email) {
     // e.g. GitHub account with a private/primary email hidden.
-    throw createError(401, "OAUTH_EMAIL_REQUIRED", "이메일을 제공하지 않는 계정입니다.");
+    throw createError(401, "OAUTH_EMAIL_REQUIRED", "This account does not provide an email address.");
   }
   return { email, provider, provider_id };
 }
@@ -117,7 +117,7 @@ async function oauthRegister({ accessToken, username }) {
   }
 
   if (await userRepo.findByUsername(username)) {
-    throw createError(409, "USERNAME_TAKEN", "이미 사용 중인 사용자명입니다.");
+    throw createError(409, "USERNAME_TAKEN", "Username is already taken.");
   }
 
   const user = await userRepo.createOAuth({ email, username, provider, provider_id });

@@ -54,7 +54,7 @@ async function generateDailyIssue(force = false) {
 // sort: 'top' (score) | 'latest' (recency); default 'top'.
 async function getIssueDetail(id, sort) {
   const issue = await issueRepo.findPublishedById(id);
-  if (!issue) throw createError(404, 'ISSUE_NOT_FOUND', '이슈를 찾을 수 없습니다.');
+  if (!issue) throw createError(404, 'ISSUE_NOT_FOUND', 'Issue not found.');
   const safeSort = sort === 'latest' ? 'latest' : 'top';
   const posts = await issueRepo.listPostsByIssue(id, safeSort);
   return { issue, posts };
@@ -71,16 +71,16 @@ async function publishIssue(id) {
   if (updated) return updated;
   // Disambiguate why the publish didn't happen.
   const existing = await issueRepo.findById(id);
-  if (!existing) throw createError(404, 'ISSUE_NOT_FOUND', '이슈를 찾을 수 없습니다.');
-  throw createError(409, 'ALREADY_PUBLISHED', '이미 게시된 이슈입니다.');
+  if (!existing) throw createError(404, 'ISSUE_NOT_FOUND', 'Issue not found.');
+  throw createError(409, 'ALREADY_PUBLISHED', 'Issue is already published.');
 }
 
 async function rejectIssue(id) {
   const removed = await issueRepo.remove(id);
   if (removed) return;
   const existing = await issueRepo.findById(id);
-  if (!existing) throw createError(404, 'ISSUE_NOT_FOUND', '이슈를 찾을 수 없습니다.');
-  throw createError(409, 'NOT_PENDING', '검수 대기(pending) 상태가 아닙니다.');
+  if (!existing) throw createError(404, 'ISSUE_NOT_FOUND', 'Issue not found.');
+  throw createError(409, 'NOT_PENDING', 'Issue is not in pending state.');
 }
 
 module.exports = {

@@ -48,7 +48,7 @@ async function regenerateIssues(req, res, next) {
     // can distinguish "AI generation failed" from other 500s.
     if (!err.status) {
       return next(
-        createError(500, 'GENERATION_FAILED', 'AI 이슈 생성에 실패했습니다.'),
+        createError(500, 'GENERATION_FAILED', 'Failed to generate the AI issue.'),
       );
     }
     next(err);

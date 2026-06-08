@@ -10,13 +10,13 @@ const { createError } = require("./errorHandler");
 function auth(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith("Bearer ")) {
-    return next(createError(401, "UNAUTHORIZED", "인증이 필요합니다."));
+    return next(createError(401, "UNAUTHORIZED", "Authentication required."));
   }
   try {
     req.user = verify(header.slice(7)); // strip 'Bearer '
     next();
   } catch (err) {
-    next(createError(401, "INVALID_TOKEN", "유효하지 않은 토큰입니다."));
+    next(createError(401, "INVALID_TOKEN", "Invalid token."));
   }
 }
 

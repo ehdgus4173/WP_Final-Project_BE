@@ -7,7 +7,7 @@ const { createError } = require("./errorHandler");
 
 function requireAdmin(req, res, next) {
   if (!req.user || req.user.role !== "admin") {
-    return next(createError(403, "FORBIDDEN", "관리자 권한이 필요합니다."));
+    return next(createError(403, "FORBIDDEN", "Admin privileges required."));
   }
   next();
 }

@@ -17,6 +17,84 @@ Seoultech ITM519 Web Programming Final Project (2026).
 | CI | GitHub Actions |
 | CD | Render |
 
+## Project Structure
+
+The app follows a one-directional layered architecture. A request flows
+**routes → controllers → services → repositories → db**
+
+- **routes** — declare endpoints + request validation
+- **controllers** — HTTP I/O only (parse request, shape the response envelope)
+- **services** — domain rules and transactions
+- **repositories** — raw parameterized SQL (`pg`, no ORM)
+
+```text
+WP_Final-Project_BE/
+├── src/
+│   ├── server.js              # HTTP server entrypoint
+│   ├── app.js                 # Express app: middleware + route mounting
+│   ├── db.js                  # pg connection pool
+│   ├── config/
+│   │   ├── env.js             # load + validate environment variables
+│   │   ├── supabase.js        # Supabase client (OAuth token verification only)
+│   │   └── swagger.js         # OpenAPI spec loader for /api/docs
+│   ├── routes/                # endpoint + validator definitions
+│   │   ├── index.js           # mounts all domain routers under /api
+│   │   ├── auth.routes.js     # register / login / me / oauth
+│   │   ├── home.routes.js
+│   │   ├── issue.routes.js
+│   │   ├── post.routes.js
+│   │   ├── comment.routes.js
+│   │   ├── admin.routes.js
+│   │   ├── cron.routes.js
+│   │   └── health.routes.js
+│   ├── controllers/           # HTTP I/O layer
+│   │   ├── authController.js
+│   │   ├── homeController.js
+│   │   ├── issueController.js
+│   │   ├── postController.js
+│   │   ├── commentController.js
+│   │   ├── voteController.js
+│   │   ├── adminController.js
+│   │   └── cronController.js
+│   ├── services/              # domain rules + transactions
+│   │   ├── authService.js
+│   │   ├── issueService.js
+│   │   ├── postService.js
+│   │   ├── commentService.js
+│   │   └── voteService.js
+│   ├── repositories/          # raw parameterized SQL
+│   │   ├── userRepo.js
+│   │   ├── issueRepo.js
+│   │   ├── postRepo.js
+│   │   ├── commentRepo.js
+│   │   ├── commentLikeRepo.js
+│   │   └── voteRepo.js
+│   ├── middleware/            # auth, validation, rate limiting, errors
+│   │   ├── auth.js            # required JWT
+│   │   ├── optionalAuth.js    # JWT if present (public routes)
+│   │   ├── requireAdmin.js    # admin-only gate
+│   │   ├── cronSecret.js      # shared-secret gate for cron
+│   │   ├── validate.js        # express-validator result handler
+│   │   ├── rateLimit.js       # login brute-force limiter
+│   │   └── errorHandler.js    # common error envelope
+│   ├── jobs/                  # AI daily issue generation
+│   │   ├── geminiClient.js    # Gemini + Google Search grounding
+│   │   └── fetchTopic.md      # externalized prompt
+│   └── utils/                 # pure helpers
+│       ├── jwt.js
+│       ├── password.js        # bcrypt hashing
+│       ├── permission.js      # isOwner / canMutate
+│       └── time.js            # KST date helpers
+├── migrations/                # ordered SQL schema migrations
+├── tests/                     # Jest (unit) + Supertest (integration)
+│   └── unit/
+├── scripts/                   # one-off dev scripts (DB connection check)
+├── supabase/                  # pg_cron setup SQL
+├── docs/
+│   └── openapi.yaml           # API contract (served at /api/docs)
+└── package.json
+```
+
 ## Getting Started
 
 ```bash
