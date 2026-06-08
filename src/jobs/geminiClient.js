@@ -2,10 +2,12 @@
 //
 // generateIssue() returns { title, summary, source_url } for today's single
 // most important news issue. The prompt lives in fetchTopic.md so it can be
-// tuned without code edits. source_url is the article link the (search-grounded)
-// model puts in its JSON, sanitized to reject Google redirect/aggregator hosts
-// (news.google.com etc.) — those resolve through a Google redirect that trips
-// the anti-bot /sorry page instead of opening the real article.
+// tuned without code edits. source_url is the RAW grounding redirect URI of the
+// source the model actually used (Google-hosted). We deliberately do NOT resolve
+// it server-side: resolving from a datacenter IP trips Google's /sorry anti-bot
+// page and would store that instead of the article. Clicked in a user's browser
+// the redirect opens the real article. Trade-off: ugly URL + link expires
+// ~30 days — acceptable for a daily-news app.
 //
 // NOTE: gemini-1.5-flash is retired (404) and gemini-2.0-flash has no free-tier
 // quota on our key — gemini-2.5-flash is the working choice. Its grounding tool
@@ -35,32 +37,18 @@ function parseIssueJson(text) {
   return {
     title: String(obj.title).trim(),
     summary: String(obj.summary).trim(),
-    source_url: sanitizeSourceUrl(obj.source_url),
   };
 }
 
-// Accept only a real publisher article URL. Google redirect/aggregator hosts
-// (news.google.com, vertexaisearch redirects) trip the anti-bot /sorry page and
-// aren't usable as sources → drop to null. The model is search-grounded, so the
-// URL it cites in its JSON is normally a real article link.
-function sanitizeSourceUrl(raw) {
-  if (typeof raw !== "string") return null;
-  let u;
-  try {
-    u = new URL(raw.trim());
-  } catch {
-    return null;
+// First grounding chunk's web.uri = the source the model grounded on. Returned
+// RAW (unresolved) on purpose — see the header note.
+function extractSourceUrl(response) {
+  const chunks =
+    response?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+  for (const c of chunks) {
+    if (c?.web?.uri) return c.web.uri;
   }
-  if (!/^https?:$/.test(u.protocol)) return null;
-  const host = u.hostname.toLowerCase();
-  if (
-    host === "google.com" ||
-    host.endsWith(".google.com") ||
-    host.includes("vertexaisearch")
-  ) {
-    return null;
-  }
-  return u.toString();
+  return null;
 }
 
 async function generateIssue() {
@@ -74,7 +62,8 @@ async function generateIssue() {
   });
 
   const result = await model.generateContent(PROMPT);
-  const { title, summary, source_url } = parseIssueJson(result.response.text());
+  const { title, summary } = parseIssueJson(result.response.text());
+  const source_url = extractSourceUrl(result.response);
   return { title, summary, source_url };
 }
 
