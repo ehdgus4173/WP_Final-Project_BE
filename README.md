@@ -4,7 +4,7 @@ Backend repository for **What's Today**, a web discussion forum where users gath
 
 Seoultech ITM519 Web Programming Final Project (2026).
 
-[![CI](https://github.com/ehdgus4173/WP_Final-Projcet_BE/actions/workflows/ci.yml/badge.svg)](https://github.com/ehdgus4173/WP_Final-Projcet_BE/actions/workflows/ci.yml)
+[![CI](https://github.com/ehdgus4173/WP_Final-Project_BE/actions/workflows/ci.yml/badge.svg)](https://github.com/ehdgus4173/WP_Final-Project_BE/actions/workflows/ci.yml)
 
 ## Tech Stack
 
