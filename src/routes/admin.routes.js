@@ -21,29 +21,29 @@ router.use(auth, requireAdmin);
 router.get(
   '/issues',
   query('status').optional().isIn(['pending', 'published'])
-    .withMessage("status는 'pending' 또는 'published'만 허용됩니다."),
+    .withMessage("status must be either 'pending' or 'published'."),
   validate,
   adminController.listIssues,
 );
 
 router.patch(
   '/issues/:id',
-  param('id').isInt().withMessage('issue id는 정수여야 합니다.'),
-  body('status').equals('published').withMessage("status는 'published'만 허용됩니다."),
+  param('id').isInt().withMessage('issue id must be an integer.'),
+  body('status').equals('published').withMessage("status must be 'published'."),
   validate,
   adminController.publishIssue,
 );
 
 router.delete(
   '/issues/:id',
-  param('id').isInt().withMessage('issue id는 정수여야 합니다.'),
+  param('id').isInt().withMessage('issue id must be an integer.'),
   validate,
   adminController.rejectIssue,
 );
 
 router.post(
   '/regenerate-issues',
-  body('force').optional().isBoolean().withMessage('force는 boolean이어야 합니다.'),
+  body('force').optional().isBoolean().withMessage('force must be a boolean.'),
   validate,
   adminController.regenerateIssues,
 );

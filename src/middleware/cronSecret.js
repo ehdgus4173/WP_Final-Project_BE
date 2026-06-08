@@ -11,7 +11,7 @@ function cronSecret(req, res, next) {
   const header = req.headers.authorization;
   const expected = env.CRON_SECRET;
   if (!expected || !header || header !== `Bearer ${expected}`) {
-    return next(createError(401, "UNAUTHORIZED", "cron 인증에 실패했습니다."));
+    return next(createError(401, "UNAUTHORIZED", "Cron authentication failed."));
   }
   next();
 }

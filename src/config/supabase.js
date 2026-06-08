@@ -20,7 +20,7 @@ function getSupabase() {
     throw createError(
       503,
       "OAUTH_NOT_CONFIGURED",
-      "소셜 로그인이 설정되지 않았습니다.",
+      "Social login is not configured.",
     );
   }
   // No session persistence — we only call getUser() with an explicit token.

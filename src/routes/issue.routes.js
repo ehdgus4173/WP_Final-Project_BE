@@ -15,7 +15,7 @@ const router = express.Router();
 
 router.get(
   '/:id',
-  param('id').isInt().withMessage('issue id는 정수여야 합니다.'),
+  param('id').isInt().withMessage('issue id must be an integer.'),
   validate,
   issueController.getById,
 );

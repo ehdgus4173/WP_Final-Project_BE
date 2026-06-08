@@ -21,11 +21,11 @@ function parseIssueJson(text) {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start === -1 || end === -1) {
-    throw new Error("Gemini 응답에서 JSON 객체를 찾지 못함");
+    throw new Error("No JSON object found in the Gemini response");
   }
   const obj = JSON.parse(text.slice(start, end + 1));
   if (!obj.title || !obj.summary) {
-    throw new Error("Gemini JSON에 title/summary 누락");
+    throw new Error("Gemini JSON is missing title/summary");
   }
   return {
     title: String(obj.title).trim(),
@@ -44,7 +44,7 @@ function extractSourceUrl(response) {
 
 async function generateIssue() {
   if (!env.GEMINI_API_KEY) {
-    throw new Error("GEMINI_API_KEY가 설정되지 않음");
+    throw new Error("GEMINI_API_KEY is not set");
   }
   const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({
