@@ -386,6 +386,47 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /admin/regenerate-issues:
+    post:
+      tags: [Admin]
+      summary: 수동 이슈 생성 (관리자)
+      description: >
+        cron과 동일한 서비스로 오늘의 이슈를 수동 생성한다(생성물은 'pending' — 별도 승인 필요).
+        cron은 CRON_SECRET 전용이라 FE에서 호출 불가하므로 admin JWT로 보호되는 별도 진입점을 제공한다.
+        body 생략 가능. `force:true`면 오늘 이슈가 있어도 dedup을 무시하고 새로 생성한다.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                force: { type: boolean, default: false }
+      responses:
+        "200":
+          description: 생성/스킵
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Success"
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          date: { type: string, example: "2026-06-08" }
+                          status: { type: string, enum: [success, skipped] }
+                          issue_id: { type: string, example: "131" }
+        "400": { $ref: "#/components/responses/BadInput" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500":
+          description: AI 이슈 생성 실패 (GENERATION_FAILED)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /cron/generate-issues:
     post:
       tags: [Cron]
