@@ -2,8 +2,10 @@
 //
 // generateIssue() returns { title, summary, source_url } for today's single
 // most important news issue. The prompt lives in fetchTopic.md so it can be
-// tuned without code edits. source_url comes from grounding metadata, so it's a
-// real, verifiable link rather than a hallucination.
+// tuned without code edits. source_url is the article link the (search-grounded)
+// model puts in its JSON, sanitized to reject Google redirect/aggregator hosts
+// (news.google.com etc.) — those resolve through a Google redirect that trips
+// the anti-bot /sorry page instead of opening the real article.
 //
 // NOTE: gemini-1.5-flash is retired (404) and gemini-2.0-flash has no free-tier
 // quota on our key — gemini-2.5-flash is the working choice. Its grounding tool
@@ -33,50 +35,32 @@ function parseIssueJson(text) {
   return {
     title: String(obj.title).trim(),
     summary: String(obj.summary).trim(),
+    source_url: sanitizeSourceUrl(obj.source_url),
   };
 }
 
-// AI STRONGLY USED
-// Fix A: grounding chunk URIs are short-lived vertexaisearch redirect links —
-// they expire (~30 days) and appear inaccessible when opened directly in a
-// browser. Resolve each to its final destination so we store a stable URL.
-// AbortSignal.timeout(5000) prevents hanging on slow/unresponsive targets.
-async function resolveRedirect(uri) {
+// Accept only a real publisher article URL. Google redirect/aggregator hosts
+// (news.google.com, vertexaisearch redirects) trip the anti-bot /sorry page and
+// aren't usable as sources → drop to null. The model is search-grounded, so the
+// URL it cites in its JSON is normally a real article link.
+function sanitizeSourceUrl(raw) {
+  if (typeof raw !== "string") return null;
+  let u;
   try {
-    const res = await fetch(uri, {
-      redirect: "follow",
-      signal: AbortSignal.timeout(5000),
-    });
-    return res.url || uri;
+    u = new URL(raw.trim());
   } catch {
-    return uri; // network failure → keep the redirect as a fallback
+    return null;
   }
-}
-
-// Fix B: score a resolved URL by path depth; penalise aggregators (daum,
-// naver) that ground to a section/homepage instead of an article deep-link.
-function urlScore(url) {
-  const AGGREGATORS = ["daum.net", "naver.com"];
-  try {
-    const { hostname, pathname } = new URL(url);
-    if (AGGREGATORS.some((d) => hostname === d || hostname.endsWith("." + d)))
-      return -1;
-    return pathname.split("/").filter(Boolean).length; // deeper path = more likely an article
-  } catch {
-    return 0;
+  if (!/^https?:$/.test(u.protocol)) return null;
+  const host = u.hostname.toLowerCase();
+  if (
+    host === "google.com" ||
+    host.endsWith(".google.com") ||
+    host.includes("vertexaisearch")
+  ) {
+    return null;
   }
-}
-
-async function extractSourceUrl(response) {
-  const chunks =
-    response?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-  const uris = chunks.map((c) => c?.web?.uri).filter(Boolean);
-  if (uris.length === 0) return null;
-
-  // Resolve all redirect URIs in parallel, then pick the best article URL
-  const resolved = await Promise.all(uris.map(resolveRedirect));
-  resolved.sort((a, b) => urlScore(b) - urlScore(a));
-  return resolved[0];
+  return u.toString();
 }
 
 async function generateIssue() {
@@ -90,8 +74,7 @@ async function generateIssue() {
   });
 
   const result = await model.generateContent(PROMPT);
-  const { title, summary } = parseIssueJson(result.response.text());
-  const source_url = await extractSourceUrl(result.response);
+  const { title, summary, source_url } = parseIssueJson(result.response.text());
   return { title, summary, source_url };
 }
 
