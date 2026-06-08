@@ -42,4 +42,47 @@ async function create({ email, username, password_hash }) {
   return rows[0];
 }
 
-module.exports = { findByEmail, findByUsername, findById, create };
+// --- Social login (OAuth) ---------------------------------------------------
+
+// Look up an account by its provider identity (provider + Supabase user.id).
+async function findByProviderId(provider, providerId) {
+  const { rows } = await db.query(
+    `SELECT ${PUBLIC_COLS} FROM users WHERE provider = $1 AND provider_id = $2`,
+    [provider, providerId],
+  );
+  return rows[0] || null;
+}
+
+// Create an OAuth account: no password_hash (NULL), role omitted (DB DEFAULT
+// 'user' — same escalation defense as create()).
+async function createOAuth({ email, username, provider, provider_id }) {
+  const { rows } = await db.query(
+    `INSERT INTO users (email, username, provider, provider_id)
+     VALUES ($1, $2, $3, $4)
+     RETURNING ${PUBLIC_COLS}`,
+    [email, username, provider, provider_id],
+  );
+  return rows[0];
+}
+
+// Link a provider identity onto an existing (email-matched) account so the same
+// person doesn't get a duplicate row. Returns the updated public row.
+async function linkProvider(userId, provider, provider_id) {
+  const { rows } = await db.query(
+    `UPDATE users SET provider = $2, provider_id = $3
+     WHERE id = $1
+     RETURNING ${PUBLIC_COLS}`,
+    [userId, provider, provider_id],
+  );
+  return rows[0] || null;
+}
+
+module.exports = {
+  findByEmail,
+  findByUsername,
+  findById,
+  create,
+  findByProviderId,
+  createOAuth,
+  linkProvider,
+};
