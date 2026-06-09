@@ -1,11 +1,9 @@
-// src/controllers/userController.js — public user profile (read-only).
-//
-// Used by MyPage when viewing someone else. Reuses authService (getMe returns
-// the public row incl. description; getMyPosts fetches recent posts by user id).
+// 공개 유저 프로필 (읽기 전용)
+// 마이페이지에서 남 볼 때 씀. authService 재사용(getMe는 description 포함 공개 row, getMyPosts는 최근 글)
 
 const authService = require("../services/authService");
 
-// GET /users/:id — public profile of any user.
+// GET /users/:id — 아무 유저의 공개 프로필
 async function getProfile(req, res, next) {
   try {
     const user = await authService.getMe(req.params.id);
@@ -15,7 +13,7 @@ async function getProfile(req, res, next) {
   }
 }
 
-// GET /users/:id/posts — that user's recent posts.
+// GET /users/:id/posts — 그 유저의 최근 글
 async function getUserPosts(req, res, next) {
   try {
     const posts = await authService.getMyPosts(req.params.id, req.query.limit);

@@ -1,14 +1,12 @@
-// src/config/env.js — Loads and validates environment variables once at startup.
-//
-// Required vars throw at boot so misconfiguration fails loud instead of
-// silently 500-ing later. Only what the current code actually uses is listed;
-// Gemini / cron vars are added when those features land.
+// 시작 시 환경변수 한 번 로드+검증
+// 필수값 없으면 부팅 때 throw → 나중에 조용히 500 나는 거 방지. 지금 코드가 실제 쓰는 것만 둠
 
 const path = require("path");
 const dotenv = require("dotenv");
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
+// 필수 env. 없거나 빈 값이면 throw
 function required(name) {
   const v = process.env[name];
   if (v === undefined || v === "") {
@@ -17,6 +15,7 @@ function required(name) {
   return v;
 }
 
+// 선택 env. 없으면 fallback
 function optional(name, fallback) {
   const v = process.env[name];
   return v === undefined || v === "" ? fallback : v;
@@ -29,8 +28,7 @@ const env = {
   NODE_ENV,
   PORT: Number(optional("PORT", "3000")),
 
-  // Under test (Jest sets NODE_ENV=test) DB/secret are optional so the app and
-  // util unit tests can run in CI without a database — only what's exercised.
+  // 테스트(NODE_ENV=test)에선 DB/시크릿 선택값 처리 → DB 없이 CI에서 app/util 단위테스트 돌게
   DATABASE_URL: isTest
     ? optional("DATABASE_URL", "")
     : required("DATABASE_URL"),
@@ -45,13 +43,11 @@ const env = {
     .map((s) => s.trim())
     .filter(Boolean),
 
-  // AI cron — only needed when /api/cron/generate-issues runs. Optional at boot;
-  // the cron path/middleware fail clearly if missing.
+  // AI 크론용. /api/cron/generate-issues 돌 때만 필요. 부팅 땐 선택값, 없으면 크론 경로에서 명확히 실패
   GEMINI_API_KEY: optional("GEMINI_API_KEY", ""),
   CRON_SECRET: optional("CRON_SECRET", ""),
 
-  // Social login (OAuth) — only needed for /api/auth/oauth*. Optional at boot;
-  // config/supabase.js fails clearly (503 OAUTH_NOT_CONFIGURED) if missing.
+  // 소셜 로그인(OAuth)용. /api/auth/oauth*에서만 필요. 없으면 config/supabase.js가 503으로 막음
   SUPABASE_URL: optional("SUPABASE_URL", ""),
   SUPABASE_ANON_KEY: optional("SUPABASE_ANON_KEY", ""),
 };

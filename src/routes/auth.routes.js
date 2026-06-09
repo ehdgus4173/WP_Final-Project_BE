@@ -1,10 +1,12 @@
-// src/routes/auth.routes.js — /api/auth routes.
+// /api/auth 라우트
 //
-//   POST /register        (validate)              회원가입 (role 입력 차단)
-//   POST /login           (rateLimit + validate)  로그인 → { token, user }
-//   GET  /me              (auth)                   내 정보
-//   POST /oauth           (validate)  소셜 로그인 1단계: 신원확인 → { token } | { needs_username }
-//   POST /oauth/register  (validate)  소셜 로그인 2단계: username 입력 후 가입 → { token, user }
+//   POST  /register        (validate)              회원가입 (role 입력 차단)
+//   POST  /login           (rateLimit + validate)  로그인 → { token, user }
+//   GET   /me              (auth)                   내 정보
+//   PATCH /me              (auth + validate)        프로필 수정 (username/description; email·role 불가)
+//   GET   /me/posts        (auth)                   내가 쓴 게시물 목록
+//   POST  /oauth           (validate)  소셜 로그인 1단계: 신원확인 → { token } | { needs_username }
+//   POST  /oauth/register  (validate)  소셜 로그인 2단계: username 입력 후 가입 → { token, user }
 
 const express = require("express");
 const { body } = require("express-validator");
@@ -28,7 +30,7 @@ const registerValidators = [
     .withMessage("Password must contain a letter.")
     .matches(/\d/)
     .withMessage("Password must contain a digit."),
-  //  role must never be supplied via the API.
+  // role은 API로 절대 받으면 안 됨
   body("role").not().exists().withMessage("role cannot be specified."),
 ];
 
@@ -41,7 +43,7 @@ const oauthValidators = [
   body("access_token").notEmpty().withMessage("access_token is required."),
 ];
 
-// Profile update (PATCH /me): username/description optional; email is read-only.
+// 프로필 수정(PATCH /me): username/description 선택, 이메일은 읽기전용
 const updateMeValidators = [
   body("username")
     .optional()
@@ -51,12 +53,12 @@ const updateMeValidators = [
     .optional()
     .isLength({ max: 500 })
     .withMessage("자기소개는 최대 500자입니다."),
-  // email/role must never be changed via this endpoint.
+  // email/role은 이 엔드포인트로 절대 변경 불가
   body("email").not().exists().withMessage("이메일은 변경할 수 없습니다."),
   body("role").not().exists().withMessage("role은 변경할 수 없습니다."),
 ];
 
-// Step 2 reuses the same username rule as register.
+// 2단계는 register와 같은 username 규칙 재사용
 const oauthRegisterValidators = [
   body("access_token").notEmpty().withMessage("access_token is required."),
   body("username")
@@ -76,7 +78,7 @@ router.get("/me", auth, authController.me);
 router.patch("/me", auth, updateMeValidators, validate, authController.updateMe);
 router.get("/me/posts", auth, authController.myPosts);
 
-// Social login (OAuth) — 2-step. See flow in 작업계획서 v2.0.
+// 소셜 로그인(OAuth) — 2단계. 흐름은 작업계획서 v2.0 참고
 router.post("/oauth", oauthValidators, validate, authController.oauthIdentify);
 router.post(
   "/oauth/register",

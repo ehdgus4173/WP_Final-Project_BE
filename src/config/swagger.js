@@ -1,7 +1,5 @@
-// src/config/swagger.js — loads the OpenAPI spec for Swagger UI.
-//
-// The spec lives in docs/openapi.yaml (single source of truth, Tech-Spec §2.1).
-// Parsed once at startup; a missing/invalid file fails loud.
+// Swagger UI용 OpenAPI 스펙 로드
+// 스펙 원본은 docs/openapi.yaml (단일 출처). 시작 때 한 번 파싱, 파일 없거나 깨지면 바로 실패
 
 const fs = require("fs");
 const path = require("path");

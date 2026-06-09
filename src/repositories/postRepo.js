@@ -1,14 +1,11 @@
-// src/repositories/postRepo.js — posts table access (raw parameterized SQL).
-//
-// Vote score is aggregated from the votes table via LEFT JOIN (::int so
-// node-pg returns numbers). Comments are NOT joined here — the comment list
-// for GET /posts/:id is assembled separately in the comments work (feat/comments).
-// EDIT is author-only: the service compares reqUser.sub === post.user_id using
-// findById(); DELETE uses canMutate (author or admin). See ERD v4.1.
+// posts 테이블 접근 (파라미터 바인딩 raw SQL)
+// 투표 점수는 votes 테이블 LEFT JOIN으로 집계(::int로 캐스팅해서 node-pg가 숫자 반환)
+// 댓글은 여기서 조인 안 함 — GET /posts/:id의 댓글 목록은 commentRepo에서 따로 조립
+// 수정은 작성자만(서비스가 findById로 sub===user_id 비교), 삭제는 canMutate. ERD v4.1
 
 const db = require('../db');
 
-// Detail columns for GET /posts/:id — post + author + aggregated vote score.
+// GET /posts/:id용 상세 컬럼 — 글 + 작성자 + 집계된 투표 점수
 const POST_DETAIL = `
   p.id,
   p.issue_id,
@@ -22,7 +19,7 @@ const POST_DETAIL = `
   COALESCE(SUM(v.value), 0)::int AS score
 `;
 
-// Create a post under an issue. Returns the created row.
+// 이슈 아래 글 생성. 생성된 row 반환
 async function insert({ issue_id, user_id, title, content }) {
   const { rows } = await db.query(
     `INSERT INTO posts (issue_id, user_id, title, content)
@@ -33,7 +30,7 @@ async function insert({ issue_id, user_id, title, content }) {
   return rows[0];
 }
 
-// Bare row including user_id — used for ownership/permission checks.
+// user_id 포함한 기본 row — 소유권/권한 체크용
 async function findById(id) {
   const { rows } = await db.query(
     `SELECT id, issue_id, user_id, title, content, created_at, updated_at
@@ -44,7 +41,7 @@ async function findById(id) {
   return rows[0] || null;
 }
 
-// Detail for GET /posts/:id — post + author + score. Comments added by caller.
+// GET /posts/:id 상세 — 글 + 작성자 + 점수. 댓글은 호출자가 붙임
 async function findDetailById(id) {
   const { rows } = await db.query(
     `SELECT ${POST_DETAIL}
@@ -58,7 +55,7 @@ async function findDetailById(id) {
   return rows[0] || null;
 }
 
-// Update title/content and bump updated_at. Returns the updated row (or null).
+// 제목/내용 수정 + updated_at 갱신. 갱신된 row(또는 null) 반환
 async function update(id, { title, content }) {
   const { rows } = await db.query(
     `UPDATE posts
@@ -70,8 +67,8 @@ async function update(id, { title, content }) {
   return rows[0] || null;
 }
 
-// Recent posts authored by a user (newest first) — for MyPage "Recent published".
-// Returns id, title, created_at, aggregated score and comment count.
+// 유저가 쓴 최근 글(최신순) — 마이페이지 "최근 게시물"
+// id, title, created_at, 집계 점수, 댓글 수 반환
 async function findRecentByUser(userId, limit = 3) {
   const { rows } = await db.query(
     `SELECT p.id,
@@ -91,7 +88,7 @@ async function findRecentByUser(userId, limit = 3) {
   return rows;
 }
 
-// Hard delete (FK ON DELETE CASCADE removes comments/votes). Returns boolean.
+// 하드 삭제(FK ON DELETE CASCADE로 댓글/투표 같이 삭제). 삭제 여부 boolean 반환
 async function remove(id) {
   const { rowCount } = await db.query(`DELETE FROM posts WHERE id = $1`, [id]);
   return rowCount > 0;

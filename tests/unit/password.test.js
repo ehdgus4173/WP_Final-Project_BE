@@ -1,4 +1,4 @@
-// tests/unit/password.test.js — bcrypt helper behaviour (no DB).
+// bcrypt 헬퍼 동작 (DB 없음)
 
 const password = require("../../src/utils/password");
 

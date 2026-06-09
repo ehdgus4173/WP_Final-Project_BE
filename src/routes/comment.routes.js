@@ -1,8 +1,8 @@
-// src/routes/comment.routes.js — comment routes.
-//
-// Comment URLs span two mount points (wired in routes/index.js):
-//   - postCommentRouter → mounted at /api/posts    (POST /:postId/comments)
-//   - commentRouter     → mounted at /api/comments  (DELETE /:id; likes added later)
+// 댓글 라우트
+// 라우터 2개 export, routes/index.js에서 각각 다른 경로에 mount:
+//   POST   /api/posts/:postId/comments  (auth + validate)  댓글/대댓글 작성 (parent_id 있으면 대댓글)
+//   DELETE /api/comments/:id            (auth)              댓글 삭제 (작성자 또는 admin)
+//   POST   /api/comments/:id/likes      (auth)              댓글 좋아요 토글
 
 const express = require('express');
 const { body } = require('express-validator');
@@ -10,7 +10,7 @@ const { auth } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const commentController = require('../controllers/commentController');
 
-// content 2-1000 chars; parent_id optional (a positive int makes it a reply).
+// content 2~1000자; parent_id 선택(양의 정수면 대댓글)
 const commentBodyValidators = [
   body('content')
     .isString().withMessage('content must be a string.')
@@ -24,7 +24,7 @@ const commentBodyValidators = [
     .withMessage('parent_id must be a positive integer.'),
 ];
 
-// /api/posts — create a comment/reply on a post
+// /api/posts — 글에 댓글/대댓글 작성
 const postCommentRouter = express.Router();
 postCommentRouter.post(
   '/:postId/comments',
@@ -37,6 +37,6 @@ postCommentRouter.post(
 // /api/comments
 const commentRouter = express.Router();
 commentRouter.delete('/:id', auth, commentController.remove);
-commentRouter.post('/:id/likes', auth, commentController.like); // like toggle
+commentRouter.post('/:id/likes', auth, commentController.like); // 좋아요 토글
 
 module.exports = { postCommentRouter, commentRouter };

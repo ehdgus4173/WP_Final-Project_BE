@@ -1,6 +1,5 @@
-// tests/unit/voteService.test.js — vote toggle logic with mocked repos (no DB).
-//
-// Covers the three toggle branches + value validation + post-not-found.
+// vote 토글 로직 — repo 모킹 (DB 없음)
+// 토글 3분기 + value 검증 + 글 없음 커버
 
 jest.mock('../../src/repositories/voteRepo');
 jest.mock('../../src/repositories/postRepo');
@@ -11,7 +10,7 @@ const voteService = require('../../src/services/voteService');
 
 beforeEach(() => {
   jest.clearAllMocks();
-  postRepo.findById.mockResolvedValue({ id: 5, user_id: 42 }); // post exists by default
+  postRepo.findById.mockResolvedValue({ id: 5, user_id: 42 }); // 기본적으로 글 존재
 });
 
 describe('voteService.toggle', () => {

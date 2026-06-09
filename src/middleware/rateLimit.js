@@ -1,7 +1,5 @@
-// src/middleware/rateLimit.js — login brute-force limiter.
-//
-// 5 requests / 15 min per IP on POST /api/auth/login (Tech-Spec §5.4).
-// Emits the project's common error envelope on 429.
+// 로그인 무차별 대입 제한기
+// POST /api/auth/login에 IP당 15분에 5회. 초과 시 429를 공통 에러 봉투로 내려줌
 
 const rateLimit = require("express-rate-limit");
 

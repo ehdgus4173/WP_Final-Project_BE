@@ -1,7 +1,6 @@
-// tests/comments.test.js — auth & validation paths for comment endpoints.
-//
-// Rejected by auth / validate middleware before any DB access, so these run
-// without a database (NODE_ENV=test → DATABASE_URL optional, JWT_SECRET default).
+// 댓글 엔드포인트 인증·검증 경로 테스트
+// auth/validate 미들웨어가 DB 닿기 전에 막는 거라 DB 없이 돌아감
+// (NODE_ENV=test → DATABASE_URL 선택, JWT_SECRET 기본값)
 
 const request = require('supertest');
 const app = require('../src/app');
