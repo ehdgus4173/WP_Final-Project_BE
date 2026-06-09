@@ -1,12 +1,42 @@
-# What's Today — Backend
+<div align="center">
 
-Backend repository for **What's Today**, a web discussion forum where users gather around a **single news issue** that AI curates every day at 06:00 KST, sharing posts, comments, and votes.
+# 📰 What's Today — Backend
 
-Seoultech ITM519 Web Programming Final Project (2026).
+**One news issue a day, curated by AI — a place to read, post, and debate.**
 
-[![CI](https://github.com/ehdgus4173/WP_Final-Project_BE/actions/workflows/ci.yaml/badge.svg)](https://github.com/ehdgus4173/WP_Final-Project_BE/actions/workflows/ci.yaml)
+Backend for **What's Today**: a discussion forum where everyone gathers around a
+**single news issue** that AI curates every day at **06:00 KST**, then shares
+posts, comments, and votes.
 
-## Tech Stack
+<br/>
+
+[![CI](https://github.com/ehdgus4173/WP_Final-Projcet_BE/actions/workflows/ci.yaml/badge.svg)](https://github.com/ehdgus4173/WP_Final-Projcet_BE/actions/workflows/ci.yaml)
+![Node.js](https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white)
+![Express](https://img.shields.io/badge/Express-000000?logo=express&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?logo=supabase&logoColor=white)
+![JWT](https://img.shields.io/badge/JWT-000000?logo=jsonwebtokens&logoColor=white)
+![Jest](https://img.shields.io/badge/Jest-C21325?logo=jest&logoColor=white)
+![Render](https://img.shields.io/badge/Render-46E3B7?logo=render&logoColor=white)
+
+**🔗 [Live API](https://wp-final-projcet-be.onrender.com/api/health) · [API Docs (Swagger)](https://wp-final-projcet-be.onrender.com/api/docs) · [Web App](https://wp-final-project-fe.onrender.com)**
+
+<sub>Seoultech ITM519 · Web Programming Final Project (2026)</sub>
+
+</div>
+
+---
+
+##  Features
+
+-  **AI-curated daily issue** — Google Gemini (Grounding with Google Search) generates one news issue every day at 06:00 KST.
+-  **Admin review** — generated issues stay `pending` until an admin approves and publishes them.
+-  **Posts & threaded comments** — write posts under an issue, comment, and reply (1-level deep) with likes & mentions.
+-  **Voting** — upvote / downvote posts; one vote per user per post.
+-  **Auth** — email/password (JWT) and social login (Google / GitHub via Supabase OAuth).
+-  **Profiles (MyPage)** — edit your username & description, view your recent posts; public read-only profiles for others.
+
+##  Tech Stack
 
 | Area | Technology |
 |------|------------|
@@ -14,20 +44,86 @@ Seoultech ITM519 Web Programming Final Project (2026).
 | Framework | Express |
 | Database | PostgreSQL 16 (hosted on Supabase) |
 | DB driver | `pg` (raw SQL, no ORM) |
-| Auth | JWT (HS256) + bcrypt |
+| Auth | JWT (HS256) + bcrypt · Supabase OAuth |
+| AI | Google Gemini (Search grounding) |
 | Testing | Jest + Supertest |
-| CI | GitHub Actions |
-| CD | Render |
+| CI / CD | GitHub Actions / Render |
 
-## Project Structure
+##  Architecture
 
-The app follows a one-directional layered architecture. A request flows
-**routes → controllers → services → repositories → db**
+A one-directional, layered request flow:
 
-- **routes** — declare endpoints + request validation
-- **controllers** — HTTP I/O only (parse request, shape the response envelope)
-- **services** — domain rules and transactions
-- **repositories** — raw parameterized SQL (`pg`, no ORM)
+```
+routes → controllers → services → repositories → db
+```
+
+| Layer | Responsibility |
+|-------|----------------|
+| **routes** | declare endpoints + request validation |
+| **controllers** | HTTP I/O only (parse request, shape the response envelope) |
+| **services** | domain rules & transactions |
+| **repositories** | raw parameterized SQL (`pg`, no ORM) |
+
+Every response uses a common envelope:
+
+```jsonc
+// success
+{ "success": true, "data": { /* ... */ } }
+// failure
+{ "success": false, "error": { "code": "BAD_INPUT", "message": "..." } }
+```
+
+##  Getting Started
+
+```bash
+# 1. Clone & install
+git clone https://github.com/ehdgus4173/WP_Final-Projcet_BE.git
+cd WP_Final-Projcet_BE
+npm install
+
+# 2. Configure environment
+cp .env.example .env        # then fill in the values
+
+# 3. Run
+npm run dev                 # development (nodemon, auto-reload)
+npm start                   # production
+```
+
+The server starts on `http://localhost:3000` and the API is served under `/api`.
+
+### Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `PORT` | Server port (default `3000`) |
+| `DATABASE_URL` | Supabase PostgreSQL connection string |
+| `JWT_SECRET` / `JWT_EXPIRES_IN` | JWT signing secret & TTL |
+| `FE_ORIGIN` | Allowed frontend origin(s) for CORS (comma-separated) |
+| `GEMINI_API_KEY` | Google Gemini key (AI cron) |
+| `CRON_SECRET` | Bearer secret for the internal cron endpoint |
+
+##  API
+
+- **Interactive docs:** [`/api/docs`](https://wp-final-projcet-be.onrender.com/api/docs) (Swagger UI, generated from [`docs/openapi.yaml`](./docs/openapi.yaml))
+- **Endpoint summary:** see [`docs/API.md`](./docs/API.md)
+
+Quick health check:
+
+```bash
+curl https://wp-final-projcet-be.onrender.com/api/health
+```
+
+##  Testing
+
+```bash
+npm test
+```
+
+Unit tests (Jest) + API integration tests (Supertest). **GitHub Actions** runs the
+full suite automatically on every push and pull request to `main` and `develop`,
+and **Render** auto-deploys on merge.
+
+## 📁 Project Structure
 
 ```text
 WP_Final-Project_BE/
@@ -35,85 +131,36 @@ WP_Final-Project_BE/
 │   ├── server.js              # HTTP server entrypoint
 │   ├── app.js                 # Express app: middleware + route mounting
 │   ├── db.js                  # pg connection pool
-│   ├── config/
-│   │   ├── env.js             # load + validate environment variables
-│   │   ├── supabase.js        # Supabase client (OAuth token verification only)
-│   │   └── swagger.js         # OpenAPI spec loader for /api/docs
+│   ├── config/                # env, supabase client, swagger loader
 │   ├── routes/                # endpoint + validator definitions
-│   │   ├── index.js           # mounts all domain routers under /api
-│   │   ├── auth.routes.js     # register / login / me / oauth
-│   │   ├── home.routes.js
-│   │   ├── issue.routes.js
-│   │   ├── post.routes.js
-│   │   ├── comment.routes.js
-│   │   ├── admin.routes.js
-│   │   ├── cron.routes.js
-│   │   └── health.routes.js
 │   ├── controllers/           # HTTP I/O layer
-│   │   ├── authController.js
-│   │   ├── homeController.js
-│   │   ├── issueController.js
-│   │   ├── postController.js
-│   │   ├── commentController.js
-│   │   ├── voteController.js
-│   │   ├── adminController.js
-│   │   └── cronController.js
 │   ├── services/              # domain rules + transactions
-│   │   ├── authService.js
-│   │   ├── issueService.js
-│   │   ├── postService.js
-│   │   ├── commentService.js
-│   │   └── voteService.js
 │   ├── repositories/          # raw parameterized SQL
-│   │   ├── userRepo.js
-│   │   ├── issueRepo.js
-│   │   ├── postRepo.js
-│   │   ├── commentRepo.js
-│   │   ├── commentLikeRepo.js
-│   │   └── voteRepo.js
 │   ├── middleware/            # auth, validation, rate limiting, errors
-│   │   ├── auth.js            # required JWT
-│   │   ├── optionalAuth.js    # JWT if present (public routes)
-│   │   ├── requireAdmin.js    # admin-only gate
-│   │   ├── cronSecret.js      # shared-secret gate for cron
-│   │   ├── validate.js        # express-validator result handler
-│   │   ├── rateLimit.js       # login brute-force limiter
-│   │   └── errorHandler.js    # common error envelope
-│   ├── jobs/                  # AI daily issue generation
-│   │   ├── geminiClient.js    # Gemini + Google Search grounding
-│   │   └── fetchTopic.md      # externalized prompt
-│   └── utils/                 # pure helpers
-│       ├── jwt.js
-│       ├── password.js        # bcrypt hashing
-│       ├── permission.js      # isOwner / canMutate
-│       └── time.js            # KST date helpers
+│   ├── jobs/                  # AI daily issue generation (Gemini)
+│   └── utils/                 # jwt, password, permission, time helpers
 ├── migrations/                # ordered SQL schema migrations
 ├── tests/                     # Jest (unit) + Supertest (integration)
 │   └── unit/
 ├── scripts/                   # one-off dev scripts (DB connection check)
 ├── supabase/                  # pg_cron setup SQL
-├── docs/
-│   └── openapi.yaml           # API contract (served at /api/docs)
+├── docs/                      # openapi.yaml (served at /api/docs) + API.md
 └── package.json
 ```
 
-## Getting Started
+##  Contributing
 
-```bash
-npm install      # install dependencies
-npm test         # run tests
-```
+Contributions are welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for the
+branching model, commit conventions, and pull request process. Both `main` and
+`develop` are protected — all changes go in through a Pull Request.
 
+##  AI Usage Disclosure
 
-## Testing
+- **Daily issue curation:** Google Gemini (Grounding with Google Search) generates one news issue each day at 06:00 KST.
+- **Development:** AI assistant tools were used for code design, debugging, and documentation drafting.
 
-```bash
-npm test
-```
+---
 
-Unit tests use Jest and API integration tests use Supertest. GitHub Actions runs the test suite automatically on every push and pull request targeting `main` and `develop`.
-
-## AI Usage Disclosure
-
-- **Daily issue curation**: Google Gemini (Grounding with Google Search) will automatically generate one news issue each day at 06:00 KST.
-- **Development**: AI assistant tools were used for code design, debugging, and documentation drafting.
+<div align="center">
+<sub>Seoultech ITM519 · Web Programming · 2026</sub>
+</div>
