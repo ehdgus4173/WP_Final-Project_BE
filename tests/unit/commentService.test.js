@@ -1,5 +1,4 @@
-// tests/unit/commentService.test.js — comment create (depth rules) + like toggle
-// with mocked repos (no DB).
+// 댓글 작성(depth 규칙) + 좋아요 토글 + 삭제 권한 — repo 모킹 (DB 없음)
 
 jest.mock('../../src/repositories/commentRepo');
 jest.mock('../../src/repositories/commentLikeRepo');
@@ -12,7 +11,7 @@ const commentService = require('../../src/services/commentService');
 
 beforeEach(() => {
   jest.clearAllMocks();
-  postRepo.findById.mockResolvedValue({ id: '5', user_id: '42' }); // post exists
+  postRepo.findById.mockResolvedValue({ id: '5', user_id: '42' }); // 글 존재
   commentRepo.insert.mockImplementation(async (row) => ({ id: '900', created_at: 'now', ...row }));
 });
 
@@ -81,5 +80,34 @@ describe('commentService.toggleLike', () => {
       status: 404,
       code: 'COMMENT_NOT_FOUND',
     });
+  });
+});
+
+describe('commentService.remove', () => {
+  test('없으면 404 COMMENT_NOT_FOUND', async () => {
+    commentRepo.findById.mockResolvedValue(null);
+    await expect(
+      commentService.remove('999', { sub: '7', role: 'user' }),
+    ).rejects.toMatchObject({ status: 404, code: 'COMMENT_NOT_FOUND' });
+  });
+
+  test('남이고 어드민도 아니면 403 FORBIDDEN', async () => {
+    commentRepo.findById.mockResolvedValue({ id: '10', user_id: '99' });
+    await expect(
+      commentService.remove('10', { sub: '7', role: 'user' }),
+    ).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
+    expect(commentRepo.remove).not.toHaveBeenCalled();
+  });
+
+  test('작성자면 삭제', async () => {
+    commentRepo.findById.mockResolvedValue({ id: '10', user_id: '7' });
+    await commentService.remove('10', { sub: '7', role: 'user' });
+    expect(commentRepo.remove).toHaveBeenCalledWith('10');
+  });
+
+  test('어드민이면 남의 댓글도 삭제', async () => {
+    commentRepo.findById.mockResolvedValue({ id: '10', user_id: '99' });
+    await commentService.remove('10', { sub: '7', role: 'admin' });
+    expect(commentRepo.remove).toHaveBeenCalledWith('10');
   });
 });

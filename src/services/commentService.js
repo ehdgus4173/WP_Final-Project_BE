@@ -1,8 +1,6 @@
-// src/services/commentService.js — comment/reply domain logic.
-//
-// Replies are 1-depth only (ERD v4.1): you may reply to a top-level comment
-// (depth 0) but not to a reply (depth 1). `@username` is a body-text convention
-// rendered by the FE, not parsed here. DELETE uses canMutate (author or admin).
+// 댓글/대댓글 도메인 로직
+// 대댓글은 1단계만(ERD v4.1): 최상위 댓글(depth 0)엔 답글 가능, 답글(depth 1)엔 불가
+// @username은 FE가 렌더하는 본문 표기 관례라 여기서 파싱 안 함. 삭제는 canMutate(작성자/어드민)
 
 const commentRepo = require('../repositories/commentRepo');
 const commentLikeRepo = require('../repositories/commentLikeRepo');
@@ -10,7 +8,7 @@ const postRepo = require('../repositories/postRepo');
 const { createError } = require('../middleware/errorHandler');
 const { canMutate } = require('../utils/permission');
 
-// Create a comment (no parent_id) or a reply (parent_id → a depth-0 comment).
+// 댓글(parent_id 없음) 또는 대댓글(parent_id → depth-0 댓글) 작성
 async function create(postId, authorId, { content, parent_id }) {
   const post = await postRepo.findById(postId);
   if (!post) {
@@ -21,9 +19,11 @@ async function create(postId, authorId, { content, parent_id }) {
   let parentId = null;
   if (parent_id !== undefined && parent_id !== null) {
     const parent = await commentRepo.findById(parent_id);
+    // 부모 없거나 다른 글 소속이면 404
     if (!parent || String(parent.post_id) !== String(postId)) {
       throw createError(404, 'PARENT_NOT_FOUND', 'Parent comment not found.');
     }
+    // 답글에 답글 달기 금지
     if (parent.depth !== 0) {
       throw createError(400, 'CANNOT_REPLY_TO_REPLY', 'You cannot reply to a reply.');
     }
@@ -40,8 +40,7 @@ async function create(postId, authorId, { content, parent_id }) {
   });
 }
 
-// Delete a comment/reply — author OR admin. Replies & likes of a parent
-// comment are removed by ON DELETE CASCADE.
+// 댓글/대댓글 삭제 — 작성자 OR 어드민. 부모 댓글의 답글/좋아요는 ON DELETE CASCADE로 같이 삭제됨
 async function remove(commentId, reqUser) {
   const comment = await commentRepo.findById(commentId);
   if (!comment) {
@@ -57,8 +56,7 @@ async function remove(commentId, reqUser) {
   await commentRepo.remove(commentId);
 }
 
-// Toggle a like on a comment/reply (single-direction). No existing like → add
-// (created); existing → remove (deleted). Returns the refreshed like_count.
+// 댓글 좋아요 토글. 없으면 추가(created), 있으면 제거(deleted). 갱신된 like_count 반환
 async function toggleLike(commentId, userId) {
   const comment = await commentRepo.findById(commentId);
   if (!comment) {

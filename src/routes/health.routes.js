@@ -1,7 +1,7 @@
-// src/routes/health.routes.js — Lightweight health probes.
+// /api/health 라우트 (헬스 체크)
 //
-// GET /api/health      — process liveness (200 if the app is up)
-// GET /api/health/db   — pings Postgres with `SELECT 1`; 503 on failure
+//   GET  /     프로세스 liveness (앱 살아있으면 200)
+//   GET  /db   Postgres에 SELECT 1 ping; 실패 시 503
 
 const express = require('express');
 const db = require('../db');

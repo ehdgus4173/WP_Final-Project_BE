@@ -1,10 +1,10 @@
-// src/routes/user.routes.js — /api/users public read-only profile routes.
+// /api/users 공개 읽기 전용 프로필 라우트
 //
-//   GET /users/:id        public profile (id, username, email, description, …)
-//   GET /users/:id/posts  that user's recent posts
+//   GET  /:id        공개 프로필 (id, username, email, description, …)
+//   GET  /:id/posts  해당 유저의 최근 게시물
 //
-// Public (no auth): anyone can view a user's MyPage. The id is constrained to
-// digits so non-numeric paths fall through to 404 instead of a DB type error.
+// 인증 불필(공개): 누구나 유저 마이페이지 조회 가능. id는 숫자로 제한해
+// 비숫자 경로는 DB 타입 에러 대신 404로 빠짐.
 
 const express = require("express");
 const userController = require("../controllers/userController");

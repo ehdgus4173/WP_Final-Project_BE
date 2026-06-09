@@ -1,9 +1,9 @@
-// src/controllers/commentController.js — comment HTTP layer (I/O only).
+// 댓글 HTTP 계층 (I/O만)
 
 const commentService = require('../services/commentService');
 
-// POST /api/posts/:postId/comments  (auth) → 201 comment/reply.
-// author is taken from the JWT (sub/username); a fresh comment has 0 likes.
+// POST /api/posts/:postId/comments (auth) → 201 댓글/대댓글
+// 작성자는 JWT(sub/username)에서 가져옴. 새 댓글은 좋아요 0
 async function create(req, res, next) {
   try {
     const c = await commentService.create(req.params.postId, req.user.sub, {
@@ -29,7 +29,7 @@ async function create(req, res, next) {
   }
 }
 
-// DELETE /api/comments/:id  (auth, author or admin) → 204 No Content
+// DELETE /api/comments/:id (auth, 작성자 또는 어드민) → 204
 async function remove(req, res, next) {
   try {
     await commentService.remove(req.params.id, req.user);
@@ -39,8 +39,8 @@ async function remove(req, res, next) {
   }
 }
 
-// POST /api/comments/:id/likes  (auth) — toggle like.
-// 201 when liked, 200 when unliked.
+// POST /api/comments/:id/likes (auth) — 좋아요 토글
+// 좋아요 추가 시 201, 취소 시 200
 async function like(req, res, next) {
   try {
     const result = await commentService.toggleLike(req.params.id, req.user.sub);

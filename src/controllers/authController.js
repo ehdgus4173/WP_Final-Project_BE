@@ -1,11 +1,10 @@
-// src/controllers/authController.js — auth HTTP layer (I/O only).
-//
-// Translates requests to authService calls and shapes the common envelope.
-// Business rules live in the service; errors propagate via next(err).
+// 인증 HTTP 계층 (I/O만)
+// 요청을 authService 호출로 넘기고 공통 봉투로 응답. 비즈니스 규칙은 서비스에, 에러는 next(err)로
 
 const authService = require("../services/authService");
 const { sign } = require("../utils/jwt");
 
+// 회원가입. 성공 시 201 + user
 async function register(req, res, next) {
   try {
     const { email, username, password } = req.body;
@@ -16,6 +15,7 @@ async function register(req, res, next) {
   }
 }
 
+// 로그인. 자격 검증 후 JWT 발급해서 token+user 반환
 async function login(req, res, next) {
   try {
     const { email, password } = req.body;
@@ -31,6 +31,7 @@ async function login(req, res, next) {
   }
 }
 
+// 내 정보 조회 (토큰의 sub로)
 async function me(req, res, next) {
   try {
     const user = await authService.getMe(req.user.sub);
@@ -40,7 +41,7 @@ async function me(req, res, next) {
   }
 }
 
-// PATCH /me — update the current user's editable profile (username, description).
+// PATCH /me — 내 프로필 중 수정 가능한 것(username, description) 업데이트
 async function updateMe(req, res, next) {
   try {
     const { username, description } = req.body;
@@ -54,7 +55,7 @@ async function updateMe(req, res, next) {
   }
 }
 
-// GET /me/posts — the current user's recent posts (MyPage "Recent published").
+// GET /me/posts — 내가 쓴 최근 글 (마이페이지 "최근 게시물")
 async function myPosts(req, res, next) {
   try {
     const posts = await authService.getMyPosts(req.user.sub, req.query.limit);
@@ -64,10 +65,9 @@ async function myPosts(req, res, next) {
   }
 }
 
-// --- Social login (OAuth), step 1: identify -------------------------------
-// Existing account → issue our JWT (same shape as login). Brand-new account →
-// { needs_username: true } so the client collects a username and calls
-// /oauth/register. Nothing is created here.
+// 소셜 로그인(OAuth) 1단계: 신원 확인
+// 기존 계정이면 JWT 발급(login과 동일 형태). 신규면 { needs_username: true } 줘서
+// 클라가 username 받아 /oauth/register 호출하게 함. 여기선 아무것도 안 만듦
 async function oauthIdentify(req, res, next) {
   try {
     const { access_token } = req.body;
@@ -83,9 +83,8 @@ async function oauthIdentify(req, res, next) {
   }
 }
 
-// --- Social login (OAuth), step 2: register -------------------------------
-// Re-verifies the token and creates the account with the chosen username, then
-// issues our JWT (same shape as login).
+// 소셜 로그인(OAuth) 2단계: 가입
+// 토큰 재검증하고 고른 username으로 계정 생성 후 JWT 발급(login과 동일 형태)
 async function oauthRegister(req, res, next) {
   try {
     const { access_token, username } = req.body;
