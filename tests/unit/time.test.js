@@ -1,4 +1,4 @@
-// tests/unit/time.test.js — todayInKST (no DB/network).
+// todayInKST (DB/네트워크 없음)
 
 const { todayInKST } = require("../../src/utils/time");
 

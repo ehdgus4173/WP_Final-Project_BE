@@ -1,6 +1,6 @@
-// src/routes/home.routes.js — /api/home route.
+// /api/home 라우트
 //
-//   GET /   오늘 이슈 1건 + 과거 이슈 최근 10건 (비로그인 가능)
+//   GET  /   오늘 이슈 1건 + 과거 이슈 최근 10건 (비로그인 가능)
 
 const express = require('express');
 const homeController = require('../controllers/homeController');

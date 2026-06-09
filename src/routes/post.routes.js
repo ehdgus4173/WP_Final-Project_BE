@@ -1,11 +1,12 @@
-// src/routes/post.routes.js — post routes.
+// 글 라우트
+// 라우터 2개 export, routes/index.js에서 각각 다른 경로에 mount:
+//   GET    /api/posts/:id             (optionalAuth)     게시물 상세 (로그인 시 user_vote 포함)
+//   PUT    /api/posts/:id             (auth + validate)  게시물 수정 (작성자만)
+//   DELETE /api/posts/:id             (auth)             게시물 삭제 (작성자 또는 admin)
+//   POST   /api/posts/:id/votes       (auth + validate)  추천/비추천 토글 (value ±1)
+//   POST   /api/issues/:issueId/posts (auth + validate)  게시물 작성 (issue 하위에 nested)
 //
-// Post URLs span two mount points, so two routers are exported and wired
-// separately in routes/index.js:
-//   - postRouter      → mounted at /api/posts   (GET/PUT/DELETE /:id, POST /:id/votes)
-//   - issuePostRouter → mounted at /api/issues  (POST /:issueId/posts = create post)
-// Keeping creation here (not in an issue router) keeps all post logic in the
-// posts domain even though its URL is nested under /issues.
+// 작성(create)을 issue 라우터가 아닌 여기 두어 URL은 /issues 하위지만 post 로직을 posts 도메인에 유지.
 
 const express = require('express');
 const { body } = require('express-validator');
@@ -15,7 +16,7 @@ const { validate } = require('../middleware/validate');
 const postController = require('../controllers/postController');
 const voteController = require('../controllers/voteController');
 
-// Body validators for create/update (Tech-Spec §4: title 1-120, content 20-10000).
+// 작성/수정 본문 검증 (title 1~120, content 20~10000)
 const postBodyValidators = [
   body('title')
     .isString().withMessage('title must be a string.')
@@ -30,7 +31,7 @@ const postBodyValidators = [
     .withMessage('content must be 20-10000 characters.'),
 ];
 
-// Vote value must be exactly +1 or -1.
+// 투표 값은 정확히 +1 또는 -1만
 const voteValidators = [
   body('value')
     .custom((v) => v === 1 || v === -1)
@@ -39,12 +40,12 @@ const voteValidators = [
 
 // /api/posts
 const postRouter = express.Router();
-postRouter.get('/:id', optionalAuth, postController.getById); // public; fills user_vote if logged in
-postRouter.put('/:id', auth, postBodyValidators, validate, postController.update); // author only
-postRouter.delete('/:id', auth, postController.remove); // author or admin
-postRouter.post('/:id/votes', auth, voteValidators, validate, voteController.vote); // toggle
+postRouter.get('/:id', optionalAuth, postController.getById); // 공개; 로그인 시 user_vote 채움
+postRouter.put('/:id', auth, postBodyValidators, validate, postController.update); // 작성자만
+postRouter.delete('/:id', auth, postController.remove); // 작성자 또는 어드민
+postRouter.post('/:id/votes', auth, voteValidators, validate, voteController.vote); // 토글
 
-// /api/issues — nested post creation under an issue
+// /api/issues — 이슈 하위 글 작성(nested)
 const issuePostRouter = express.Router();
 issuePostRouter.post(
   '/:issueId/posts',

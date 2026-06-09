@@ -1,4 +1,4 @@
-// tests/unit/permission.test.js — isOwner (edit) + canMutate (delete), no DB.
+// isOwner(수정) + canMutate(삭제) 권한 헬퍼, DB 없음
 
 const { isOwner, canMutate } = require("../../src/utils/permission");
 

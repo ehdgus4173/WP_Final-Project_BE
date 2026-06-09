@@ -1,10 +1,7 @@
-// tests/posts.test.js — auth & validation paths for post endpoints.
-//
-// These requests are rejected by the auth / validate middleware BEFORE the
-// controller touches Postgres, so they run without a database (Jest sets
-// NODE_ENV=test → DATABASE_URL optional, JWT_SECRET has a test default).
-// Success / CRUD paths that hit the DB are covered separately once a test
-// database is wired up.
+// 글 엔드포인트 인증·검증 경로 테스트
+// 컨트롤러가 Postgres 닿기 전에 auth/validate 미들웨어가 막는 거라 DB 없이 돌아감
+// (NODE_ENV=test → DATABASE_URL 선택, JWT_SECRET 테스트 기본값)
+// DB 닿는 성공/CRUD 경로는 테스트 DB 붙으면 따로 커버
 
 const request = require('supertest');
 const app = require('../src/app');

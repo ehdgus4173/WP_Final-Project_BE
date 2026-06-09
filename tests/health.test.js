@@ -1,8 +1,6 @@
-// tests/health.test.js — Supertest integration test for the health probes.
-//
-// Imports the Express app directly (no port bind). Jest sets NODE_ENV=test, so
-// env.js makes DATABASE_URL optional and the app boots without a database —
-// the liveness probe and 404 fallback don't touch Postgres.
+// 헬스 체크 Supertest 통합 테스트
+// Express 앱 직접 import(포트 바인딩 없음). NODE_ENV=test라 env.js가 DATABASE_URL 선택 처리 →
+// DB 없이 부팅됨. liveness 프로브와 404 폴백은 Postgres 안 닿음
 
 const request = require('supertest');
 const app = require('../src/app');

@@ -1,12 +1,11 @@
-// src/repositories/issueRepo.js — issues table access (raw parameterized SQL).
-//
-// Home only surfaces published issues (ERD v4.1: status pending/published).
-// "Today" is decided by KST date in SQL so it's independent of server/DB TZ.
-// post_count is aggregated via LEFT JOIN; ::int so node-pg returns a number.
+// issues 테이블 접근 (파라미터 바인딩 raw SQL)
+// 홈은 published 이슈만 노출(ERD v4.1: status pending/published)
+// "오늘"은 SQL에서 KST 날짜로 판단 → 서버/DB 타임존과 무관
+// post_count는 LEFT JOIN으로 집계, ::int로 숫자 반환
 
-const db = require('../db');
+const db = require("../db");
 
-// Columns shared by home cards. `date` is the KST calendar date as a string.
+// 홈 카드 공통 컬럼. date는 KST 달력 날짜 문자열
 const ISSUE_CARD = `
   i.id,
   i.title,
@@ -17,14 +16,14 @@ const ISSUE_CARD = `
   COUNT(p.id)::int AS post_count
 `;
 
-// Published issue whose KST date is today. At most one per day; newest wins.
+// KST 기준 오늘 날짜의 published 이슈. 하루 최대 1개, 최신 우선
 async function findTodayPublished() {
   const { rows } = await db.query(
     `SELECT ${ISSUE_CARD}
        FROM issues i
        LEFT JOIN posts p ON p.issue_id = i.id
       WHERE i.status = 'published'
-        AND (i.created_at AT TIME ZONE 'Asia/Seoul')::date
+        AND (i.published_at AT TIME ZONE 'Asia/Seoul')::date
             = (now() AT TIME ZONE 'Asia/Seoul')::date
       GROUP BY i.id
       ORDER BY i.created_at DESC
@@ -33,14 +32,14 @@ async function findTodayPublished() {
   return rows[0] || null;
 }
 
-// Published issues from days other than today, newest first.
+// 오늘 말고 지난 날들의 published 이슈, 최신순
 async function findPastPublished(limit = 10) {
   const { rows } = await db.query(
     `SELECT ${ISSUE_CARD}
        FROM issues i
        LEFT JOIN posts p ON p.issue_id = i.id
       WHERE i.status = 'published'
-        AND (i.created_at AT TIME ZONE 'Asia/Seoul')::date
+        AND (i.published_at AT TIME ZONE 'Asia/Seoul')::date
             <> (now() AT TIME ZONE 'Asia/Seoul')::date
       GROUP BY i.id
       ORDER BY i.created_at DESC
@@ -50,7 +49,7 @@ async function findPastPublished(limit = 10) {
   return rows;
 }
 
-// Any issue (status-agnostic) on the given KST date — cron dedup check.
+// 해당 KST 날짜의 아무 이슈(상태 무관) — 크론 중복 체크용
 async function findByDate(kstDate) {
   const { rows } = await db.query(
     `SELECT id, status FROM issues
@@ -62,8 +61,7 @@ async function findByDate(kstDate) {
   return rows[0] || null;
 }
 
-// Insert a cron-generated issue. status defaults to 'pending' (DB DEFAULT) —
-// it stays hidden until an admin publishes it.
+// 크론 생성 이슈 INSERT. status는 DB DEFAULT 'pending' — 어드민 승인 전까진 숨겨짐
 async function insert({ title, summary, source_url }) {
   const { rows } = await db.query(
     `INSERT INTO issues (title, summary, source_url)
@@ -74,11 +72,12 @@ async function insert({ title, summary, source_url }) {
   return rows[0];
 }
 
-// --- Admin review (status-aware, no post_count) ---
+// 어드민 검수 (상태 기반, post_count 없음)
 
-const ADMIN_COLS = 'id, title, summary, source_url, status, published_at, created_at';
+const ADMIN_COLS =
+  "id, title, summary, source_url, status, published_at, created_at";
 
-// All issues of a given status, newest first (admin list).
+// 특정 상태 이슈 전부, 최신순 (어드민 목록)
 async function listByStatus(status) {
   const { rows } = await db.query(
     `SELECT ${ADMIN_COLS} FROM issues WHERE status = $1 ORDER BY created_at DESC`,
@@ -87,7 +86,7 @@ async function listByStatus(status) {
   return rows;
 }
 
-// Single issue, any status (existence checks for publish/reject).
+// 단일 이슈, 상태 무관 (publish/reject 존재 체크용)
 async function findById(id) {
   const { rows } = await db.query(
     `SELECT ${ADMIN_COLS} FROM issues WHERE id = $1`,
@@ -96,7 +95,7 @@ async function findById(id) {
   return rows[0] || null;
 }
 
-// Approve: pending → published. Returns row, or null if not found / not pending.
+// 승인: pending → published. row 반환, 없거나 pending 아니면 null
 async function publish(id) {
   const { rows } = await db.query(
     `UPDATE issues SET status = 'published', published_at = now()
@@ -107,7 +106,7 @@ async function publish(id) {
   return rows[0] || null;
 }
 
-// Reject: hard delete a pending issue. Returns true if a row was deleted.
+// 거절: pending 이슈 하드 삭제. 삭제됐으면 true
 async function remove(id) {
   const { rowCount } = await db.query(
     `DELETE FROM issues WHERE id = $1 AND status = 'pending'`,
@@ -116,9 +115,9 @@ async function remove(id) {
   return rowCount > 0;
 }
 
-// --- Issue detail (GET /api/issues/:id) ---
+// 이슈 상세 (GET /api/issues/:id)
 
-// Single published issue with post_count + KST date. null if missing/not published.
+// post_count + KST date 붙은 단일 published 이슈. 없거나 미공개면 null
 async function findPublishedById(id) {
   const { rows } = await db.query(
     `SELECT ${ISSUE_CARD}
@@ -131,15 +130,15 @@ async function findPublishedById(id) {
   return rows[0] || null;
 }
 
-// Whitelisted ORDER BY clauses (never interpolate user input directly).
+// 화이트리스트 ORDER BY (유저 입력 직접 끼워넣지 않음)
 const POST_ORDER = {
-  top: 'score DESC, p.created_at DESC',
-  latest: 'p.created_at DESC',
+  top: "score DESC, p.created_at DESC",
+  latest: "p.created_at DESC",
 };
 
-// Posts under an issue, with author + vote score + comment_count + body preview.
-// votes/comments are aggregated via scalar subqueries to avoid JOIN fan-out.
-async function listPostsByIssue(issueId, sort = 'top') {
+// 이슈 아래 글 목록 — 작성자 + 투표 점수 + 댓글 수 + 본문 미리보기
+// votes/comments는 스칼라 서브쿼리로 집계해서 JOIN fan-out 방지
+async function listPostsByIssue(issueId, sort = "top") {
   const orderBy = POST_ORDER[sort] || POST_ORDER.top;
   const { rows } = await db.query(
     `SELECT

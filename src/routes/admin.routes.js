@@ -1,9 +1,9 @@
-// src/routes/admin.routes.js — /api/admin (auth + requireAdmin on all routes).
+// /api/admin 라우트 (auth + requireAdmin 전역 적용)
 //
-//   GET    /issues             검수 대기/전체 이슈 목록 (?status=pending 기본)
-//   PATCH  /issues/:id         승인 → published ({ status: 'published' })
-//   DELETE /issues/:id         거절 → pending 이슈 hard delete
-//   POST   /regenerate-issues  수동 이슈 생성 (cron과 동일 서비스, { force? })
+//   GET    /issues             (validate)  검수 대기/전체 이슈 목록 (?status=pending 기본)
+//   PATCH  /issues/:id         (validate)  승인 → published ({ status: 'published' })
+//   DELETE /issues/:id         (validate)  거절 → pending 이슈 하드 삭제
+//   POST   /regenerate-issues  (validate)  수동 이슈 생성 (cron 동일 서비스, { force? })
 
 const express = require('express');
 const { param, body, query } = require('express-validator');
@@ -15,7 +15,7 @@ const { validate } = require('../middleware/validate');
 
 const router = express.Router();
 
-// Every admin route requires a valid admin token.
+// 모든 어드민 라우트는 유효한 어드민 토큰 필요
 router.use(auth, requireAdmin);
 
 router.get(

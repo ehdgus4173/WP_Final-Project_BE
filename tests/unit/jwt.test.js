@@ -1,10 +1,9 @@
-// tests/unit/jwt.test.js — JWT sign/verify (no DB). Uses the test JWT_SECRET
-// that env.js falls back to under NODE_ENV=test.
+// JWT 발급/검증 (DB 없음). NODE_ENV=test에서 env.js가 쓰는 테스트용 JWT_SECRET 사용
 
 const jwtUtil = require("../../src/utils/jwt");
 const jwt = require("jsonwebtoken");
 
-const TEST_SECRET = "test-secret-not-for-prod"; // env.js fallback in test
+const TEST_SECRET = "test-secret-not-for-prod"; // 테스트에서 env.js 폴백값
 
 describe("utils/jwt", () => {
   test("sign/verify round-trip preserves claims including role", () => {

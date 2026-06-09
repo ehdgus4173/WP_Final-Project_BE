@@ -1,6 +1,6 @@
-// src/routes/cron.routes.js — /api/cron (internal, CRON_SECRET-protected).
+// /api/cron 라우트 (내부용, CRON_SECRET 보호)
 //
-//   POST /generate-issues   pg_cron이 호출. Gemini → issues INSERT (pending)
+//   POST  /generate-issues  (cronSecret)  pg_cron 호출 → Gemini → issues INSERT (pending)
 
 const express = require('express');
 const { cronSecret } = require('../middleware/cronSecret');

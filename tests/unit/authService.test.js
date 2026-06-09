@@ -1,12 +1,15 @@
-// tests/unit/authService.test.js — auth service rules with mocked deps (no DB).
-//
-// Focus: the social-login NULL-password regression guard, plus the OAuth
-// identify/register branches (existing / email-link / new-user / username dup).
+// auth 서비스 규칙 — 의존성 모킹 (DB 없음)
+// 초점: 소셜로그인 NULL 비번 회귀 가드 + OAuth identify/register 분기(기존/이메일연결/신규/username중복)
+//       + register·로그인성공·프로필수정·getMyPosts
 
 jest.mock('../../src/repositories/userRepo');
+jest.mock('../../src/repositories/postRepo');
 jest.mock('../../src/config/supabase');
+jest.mock('../../src/utils/password');
 
 const userRepo = require('../../src/repositories/userRepo');
+const postRepo = require('../../src/repositories/postRepo');
+const password = require('../../src/utils/password');
 const { getSupabase } = require('../../src/config/supabase');
 const authService = require('../../src/services/authService');
 
@@ -16,7 +19,7 @@ beforeEach(() => {
 
 describe('verifyCredentials — NULL password_hash guard (OAuth accounts)', () => {
   test('OAuth account (password_hash NULL) → 401, not a thrown 500', async () => {
-    // Regression: bcrypt.compare(plain, null) throws; the guard must 401 first.
+    // 회귀: bcrypt.compare(plain, null)은 throw 함 → 가드가 먼저 401 내야 함
     userRepo.findByEmail.mockResolvedValue({
       id: 1,
       email: 'oauth@example.com',
@@ -38,7 +41,7 @@ describe('verifyCredentials — NULL password_hash guard (OAuth accounts)', () =
 });
 
 describe('OAuth identify / register', () => {
-  // Helper: stub supabase.auth.getUser to return a verified identity.
+  // 헬퍼: supabase.auth.getUser가 검증된 신원 반환하도록 스텁
   function mockSupabaseUser(user) {
     getSupabase.mockReturnValue({
       auth: { getUser: jest.fn().mockResolvedValue({ data: { user }, error: null }) },
@@ -128,5 +131,106 @@ describe('OAuth identify / register', () => {
     const result = await authService.oauthRegister({ accessToken: 'tok', username: 'whatever' });
     expect(result.user.id).toBe(7);
     expect(userRepo.createOAuth).not.toHaveBeenCalled();
+  });
+
+  test('register: 이메일 매칭 로컬 계정 → linkProvider 후 반환', async () => {
+    mockSupabaseUser(verified);
+    userRepo.findByProviderId.mockResolvedValue(null);
+    userRepo.findByEmail.mockResolvedValue({ id: 9, email: 'alice@example.com', password_hash: 'h' });
+    userRepo.linkProvider.mockResolvedValue({ id: 9, username: 'alice', role: 'user', password_hash: 'h' });
+    const result = await authService.oauthRegister({ accessToken: 'tok', username: 'whatever' });
+    expect(userRepo.linkProvider).toHaveBeenCalledWith(9, 'google', 'sb-uuid-123');
+    expect(result.user.password_hash).toBeUndefined();
+    expect(userRepo.createOAuth).not.toHaveBeenCalled();
+  });
+});
+
+describe('authService.register', () => {
+  test('이메일 중복 → 409 EMAIL_TAKEN', async () => {
+    userRepo.findByEmail.mockResolvedValue({ id: 1 });
+    await expect(
+      authService.register({ email: 'a@b.com', username: 'kim', password: 'pass1234' }),
+    ).rejects.toMatchObject({ status: 409, code: 'EMAIL_TAKEN' });
+  });
+
+  test('username 중복 → 409 USERNAME_TAKEN', async () => {
+    userRepo.findByEmail.mockResolvedValue(null);
+    userRepo.findByUsername.mockResolvedValue({ id: 2 });
+    await expect(
+      authService.register({ email: 'a@b.com', username: 'kim', password: 'pass1234' }),
+    ).rejects.toMatchObject({ status: 409, code: 'USERNAME_TAKEN' });
+  });
+
+  test('정상 → 비번 해싱 후 create (role 안 넘김)', async () => {
+    userRepo.findByEmail.mockResolvedValue(null);
+    userRepo.findByUsername.mockResolvedValue(null);
+    password.hash.mockResolvedValue('hashed');
+    userRepo.create.mockResolvedValue({ id: 3, email: 'a@b.com', username: 'kim', role: 'user' });
+    const r = await authService.register({ email: 'a@b.com', username: 'kim', password: 'pass1234' });
+    expect(password.hash).toHaveBeenCalledWith('pass1234');
+    expect(userRepo.create).toHaveBeenCalledWith({ email: 'a@b.com', username: 'kim', password_hash: 'hashed' });
+    expect(r).not.toHaveProperty('role', 'admin');
+  });
+});
+
+describe('authService.verifyCredentials — 성공 경로', () => {
+  test('비번 일치 → password_hash 뺀 user 반환', async () => {
+    userRepo.findByEmail.mockResolvedValue({
+      id: 1, email: 'a@b.com', username: 'kim', role: 'user', password_hash: 'stored',
+    });
+    password.compare.mockResolvedValue(true);
+    const r = await authService.verifyCredentials({ email: 'a@b.com', password: 'pass1234' });
+    expect(r.password_hash).toBeUndefined();
+    expect(r.id).toBe(1);
+  });
+});
+
+describe('authService.getMe', () => {
+  test('없으면 404 USER_NOT_FOUND', async () => {
+    userRepo.findById.mockResolvedValue(null);
+    await expect(authService.getMe(999)).rejects.toMatchObject({ status: 404, code: 'USER_NOT_FOUND' });
+  });
+
+  test('있으면 user 반환', async () => {
+    userRepo.findById.mockResolvedValue({ id: 1, username: 'kim' });
+    const r = await authService.getMe(1);
+    expect(r.username).toBe('kim');
+  });
+});
+
+describe('authService.updateProfile', () => {
+  test('username이 남이 쓰는 거면 409 USERNAME_TAKEN', async () => {
+    userRepo.findByUsername.mockResolvedValue({ id: 99, username: 'taken' });
+    await expect(
+      authService.updateProfile(1, { username: 'taken' }),
+    ).rejects.toMatchObject({ status: 409, code: 'USERNAME_TAKEN' });
+  });
+
+  test('본인이 이미 쓰던 username이면 통과', async () => {
+    userRepo.findByUsername.mockResolvedValue({ id: 1, username: 'me' });
+    userRepo.updateProfile.mockResolvedValue({ id: 1, username: 'me' });
+    const r = await authService.updateProfile(1, { username: 'me' });
+    expect(r.username).toBe('me');
+  });
+
+  test('수정 대상 없으면 404', async () => {
+    userRepo.updateProfile.mockResolvedValue(null);
+    await expect(
+      authService.updateProfile(1, { description: 'hi' }),
+    ).rejects.toMatchObject({ status: 404, code: 'USER_NOT_FOUND' });
+  });
+});
+
+describe('authService.getMyPosts', () => {
+  test('limit 기본 3, repo로 전달', async () => {
+    postRepo.findRecentByUser.mockResolvedValue([{ id: 1 }]);
+    await authService.getMyPosts(1, undefined);
+    expect(postRepo.findRecentByUser).toHaveBeenCalledWith(1, 3);
+  });
+
+  test('limit은 1~20로 clamp (50 → 20)', async () => {
+    postRepo.findRecentByUser.mockResolvedValue([]);
+    await authService.getMyPosts(1, '50');
+    expect(postRepo.findRecentByUser).toHaveBeenCalledWith(1, 20);
   });
 });

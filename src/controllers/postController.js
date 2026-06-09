@@ -1,12 +1,10 @@
-// src/controllers/postController.js — post HTTP layer (I/O only).
-//
-// Business logic lives in postService. Controllers only read req, call the
-// service, and shape the response envelope { success, data }.
+// 글 HTTP 계층 (I/O만)
+// 비즈니스 로직은 postService에. 컨트롤러는 req 읽고 서비스 호출 후 { success, data } 봉투만 만듦
 
 const postService = require('../services/postService');
 
-// POST /api/issues/:issueId/posts  (auth)
-// → 201 { id, issue_id, title, created_at } (FE redirects to /posts/:id)
+// POST /api/issues/:issueId/posts (auth)
+// → 201 { id, issue_id, title, created_at } (FE는 /posts/:id로 리다이렉트)
 async function create(req, res, next) {
   try {
     const post = await postService.create(req.params.issueId, req.user.sub, {
@@ -27,8 +25,8 @@ async function create(req, res, next) {
   }
 }
 
-// GET /api/posts/:id  (public, optionalAuth) → { post, comments }
-// getDetail returns the full aggregated payload (post + user_vote + comments).
+// GET /api/posts/:id (공개, optionalAuth) → { post, comments }
+// getDetail이 합쳐진 전체 페이로드(post + user_vote + comments) 반환
 async function getById(req, res, next) {
   try {
     const data = await postService.getDetail(req.params.id, req.user?.sub);
@@ -38,7 +36,7 @@ async function getById(req, res, next) {
   }
 }
 
-// PUT /api/posts/:id  (auth, author only) → 200 { id, title, updated_at }
+// PUT /api/posts/:id (auth, 작성자만) → 200 { id, title, updated_at }
 async function update(req, res, next) {
   try {
     const post = await postService.update(req.params.id, req.user, {
@@ -54,7 +52,7 @@ async function update(req, res, next) {
   }
 }
 
-// DELETE /api/posts/:id  (auth, author or admin) → 204 No Content
+// DELETE /api/posts/:id (auth, 작성자 또는 어드민) → 204
 async function remove(req, res, next) {
   try {
     await postService.remove(req.params.id, req.user);

@@ -1,10 +1,10 @@
-// src/controllers/voteController.js — vote HTTP layer (I/O only).
-//
-// POST /api/posts/:id/votes  (auth) — toggle upvote/downvote.
-// 201 on new vote, 200 on update/delete.
+// 투표 HTTP 계층 (I/O만)
+// POST /api/posts/:id/votes (auth) — 추천/비추천 토글
+// 새 투표면 201, 변경/취소면 200
 
 const voteService = require('../services/voteService');
 
+// 투표 토글
 async function vote(req, res, next) {
   try {
     const result = await voteService.toggle(

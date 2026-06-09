@@ -1,9 +1,8 @@
-// src/routes/issue.routes.js — /api/issues read routes (issues domain).
+// /api/issues 읽기 라우트 (issues 도메인)
 //
-//   GET /:id   이슈(published) + 게시물 목록 (?sort=top|latest, 비로그인 가능)
+//   GET  /:id  (validate)  이슈(published) + 게시물 목록 (?sort=top|latest, 비로그인 가능)
 //
-// Mounted at /api/issues alongside the post-creation router (POST /:id/posts);
-// method+path differ so they coexist.
+// post-creation 라우터(POST /:id/posts)와 같은 /api/issues에 mount; method+path가 달라 공존.
 
 const express = require('express');
 const { param } = require('express-validator');
