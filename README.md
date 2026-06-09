@@ -27,16 +27,16 @@ posts, comments, and votes.
 
 ---
 
-## ✨ Features
+##  Features
 
-- 🤖 **AI-curated daily issue** — Google Gemini (Grounding with Google Search) generates one news issue every day at 06:00 KST.
-- 🛡️ **Admin review** — generated issues stay `pending` until an admin approves and publishes them.
-- 💬 **Posts & threaded comments** — write posts under an issue, comment, and reply (1-level deep) with likes & mentions.
-- 👍 **Voting** — upvote / downvote posts; one vote per user per post.
-- 🔐 **Auth** — email/password (JWT) and social login (Google / GitHub via Supabase OAuth).
-- 🙋 **Profiles (MyPage)** — edit your username & description, view your recent posts; public read-only profiles for others.
+-  **AI-curated daily issue** — Google Gemini (Grounding with Google Search) generates one news issue every day at 06:00 KST.
+-  **Admin review** — generated issues stay `pending` until an admin approves and publishes them.
+-  **Posts & threaded comments** — write posts under an issue, comment, and reply (1-level deep) with likes & mentions.
+-  **Voting** — upvote / downvote posts; one vote per user per post.
+-  **Auth** — email/password (JWT) and social login (Google / GitHub via Supabase OAuth).
+-  **Profiles (MyPage)** — edit your username & description, view your recent posts; public read-only profiles for others.
 
-## 🧱 Tech Stack
+##  Tech Stack
 
 | Area | Technology |
 |------|------------|
@@ -49,7 +49,7 @@ posts, comments, and votes.
 | Testing | Jest + Supertest |
 | CI / CD | GitHub Actions / Render |
 
-## 🏗️ Architecture
+##  Architecture
 
 A one-directional, layered request flow:
 
@@ -73,7 +73,7 @@ Every response uses a common envelope:
 { "success": false, "error": { "code": "BAD_INPUT", "message": "..." } }
 ```
 
-## 🚀 Getting Started
+##  Getting Started
 
 ```bash
 # 1. Clone & install
@@ -102,7 +102,7 @@ The server starts on `http://localhost:3000` and the API is served under `/api`.
 | `GEMINI_API_KEY` | Google Gemini key (AI cron) |
 | `CRON_SECRET` | Bearer secret for the internal cron endpoint |
 
-## 📚 API
+##  API
 
 - **Interactive docs:** [`/api/docs`](https://wp-final-projcet-be.onrender.com/api/docs) (Swagger UI, generated from [`docs/openapi.yaml`](./docs/openapi.yaml))
 - **Endpoint summary:** see [`docs/API.md`](./docs/API.md)
@@ -113,7 +113,7 @@ Quick health check:
 curl https://wp-final-projcet-be.onrender.com/api/health
 ```
 
-## 🧪 Testing
+##  Testing
 
 ```bash
 npm test
@@ -148,13 +148,13 @@ WP_Final-Project_BE/
 └── package.json
 ```
 
-## 🤝 Contributing
+##  Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for the
 branching model, commit conventions, and pull request process. Both `main` and
 `develop` are protected — all changes go in through a Pull Request.
 
-## 🤖 AI Usage Disclosure
+##  AI Usage Disclosure
 
 - **Daily issue curation:** Google Gemini (Grounding with Google Search) generates one news issue each day at 06:00 KST.
 - **Development:** AI assistant tools were used for code design, debugging, and documentation drafting.
